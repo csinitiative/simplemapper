@@ -13,13 +13,13 @@ module SimpleMapper
     end
 
     module ClassMethods
-      def attributes
-        @attributes ||= {}
+      def simple_mapper
+        @simple_mapper ||= SimpleMapper::Attributes::Manager.new(self)
       end
 
       def maps(attr)
-        attribute = create_attribute(attr)
-        install_attribute attr, attribute
+        attribute = simple_mapper.create_attribute(attr)
+        simple_mapper.install_attribute attr, attribute
       end
 
       def create_attribute(attr)
@@ -28,6 +28,29 @@ module SimpleMapper
 
       def install_attribute(attr, object)
         attr_accessor attr
+        attributes[attr] = object
+      end
+    end
+
+    class Manager
+      attr_accessor :applies_to
+
+      def initialize(apply_to = nil)
+        self.applies_to = apply_to if apply_to
+      end
+
+      def attributes
+        @attributes ||= {}
+      end
+
+      def create_attribute(attr)
+        SimpleMapper::Attribute.new(attr)
+      end
+
+      def install_attribute(attr, object)
+        applies_to.module_eval do
+          attr_accessor attr
+        end
         attributes[attr] = object
       end
     end
