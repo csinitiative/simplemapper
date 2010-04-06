@@ -1,9 +1,20 @@
 module SimpleMapper
   class Attribute
-    attr_accessor :key, :name
+    Options = [
+      :key,
+      :type,
+    ]
+    attr_accessor :key, :name, :type
 
     def initialize(name, options = {})
       self.key = self.name = name
+      process_options(options)
+    end
+
+    def process_options(options = {})
+      Options.each do |option|
+        self.send(:"#{option.to_s}=", options[option]) if options[option]
+      end
     end
   end
 
@@ -17,19 +28,53 @@ module SimpleMapper
         @simple_mapper ||= SimpleMapper::Attributes::Manager.new(self)
       end
 
-      def maps(attr)
-        attribute = simple_mapper.create_attribute(attr)
+      def maps(attr, *args)
+        attribute = simple_mapper.create_attribute(attr, *args)
         simple_mapper.install_attribute attr, attribute
       end
+    end
 
-      def create_attribute(attr)
-        SimpleMapper::Attribute.new(attr)
-      end
+    def key_for(attr)
+      self.class.simple_mapper.attributes[attr].key
+    end
 
-      def install_attribute(attr, object)
-        attr_accessor attr
-        attributes[attr] = object
+    def reset_attribute(attr)
+      @simple_mapper_init.delete attr
+      remove_instance_variable(:"@#{attr}")
+    end
+
+    def write_attribute(attr, value)
+      instance_variable_set(:"@#{attr}", value)
+      @simple_mapper_init[attr] = true
+      value
+    end
+
+    def transform_source_attribute(attr)
+      val = read_source_attribute(attr)
+      if type = self.class.simple_mapper.attributes[attr].type
+        type.decode(val)
+      else
+        val
       end
+    end
+
+    def read_source_attribute(attr)
+      @simple_mapper_source[ key_for(attr) ]
+    end
+
+    def read_attribute(attr)
+      if @simple_mapper_init[attr]
+        instance_variable_get(:"@#{attr}")
+      else
+        result = instance_variable_set(:"@#{attr}", transform_source_attribute(attr))
+        @simple_mapper_init[attr] = true
+        result
+      end
+    end
+
+    def initialize(values = {})
+      @simple_mapper_source = values
+      @simple_mapper_init = {}
     end
 
     class Manager
@@ -43,8 +88,8 @@ module SimpleMapper
         @attributes ||= {}
       end
 
-      def create_attribute(attr)
-        SimpleMapper::Attribute.new(attr)
+      def create_attribute(*args)
+        SimpleMapper::Attribute.new(*args)
       end
 
       def install_attribute(attr, object)
