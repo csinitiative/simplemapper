@@ -16,6 +16,12 @@ module SimpleMapper
         self.send(:"#{option.to_s}=", options[option]) if options[option]
       end
     end
+
+    def encode(value)
+      return value unless type
+      converter = type.respond_to?(:encode) ? type : SimpleMapper::Attributes.type?(type)[:converter]
+      converter.encode(value)
+    end
   end
 
   module Attributes
@@ -70,7 +76,8 @@ module SimpleMapper
     def transform_source_attribute(attr)
       val = read_source_attribute(attr)
       if type = self.class.simple_mapper.attributes[attr].type
-        type.decode(val)
+        converter = type.respond_to?(:decode) ? type : SimpleMapper::Attributes.type?(type)[:converter]
+        converter.decode(val)
       else
         val
       end
@@ -100,7 +107,7 @@ module SimpleMapper
       attribs = self.class.simple_mapper.attributes.values
       attribs.inject({}) do |accum, attrib|
         val = read_attribute(attrib.name)
-        val = attrib.type.encode(val) if attrib.type
+        val = attrib.encode(val) if attrib.type
         if all or ! val.nil?
           accum[attrib.key] = val
         end

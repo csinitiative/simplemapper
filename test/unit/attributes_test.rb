@@ -169,7 +169,7 @@ class AttributesTest < Test::Unit::TestCase
         assert_equal({:no_type => 'no type', :alt_key => 'alt key'}, @instance.to_simple)
       end
 
-      should 'encode typed attribute values' do
+      should 'encode typed attribute values for converter types' do
         @type = Object.new
         @type.instance_eval do
           def encode(value)
@@ -182,6 +182,20 @@ class AttributesTest < Test::Unit::TestCase
         @class.maps :typed, :type => @type
         @instance = @class.new( :typed => 'typed!' )
         assert_equal 'encoded: typed!', @instance.to_simple[:typed]
+      end
+
+      should 'encode typed attribute values for registered types' do
+        @type = mock('type')
+        @type.expects(:encode).once.with('typed!').returns('encoded!')
+        @type.stubs(:decode).returns('typed!')
+        SimpleMapper::Attributes.expects(:type?).with(:type).at_least_once.returns({
+          :name          => :type,
+          :expected_type => @type.class,
+          :converter     => @type,
+        })
+        @class.maps :typed, :type => :type
+        @instance = @class.new( :typed => 'typed!' )
+        assert_equal 'encoded!', @instance.to_simple[:typed]
       end
 
       context 'with :defined argument' do
@@ -242,11 +256,25 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Blah!', @instance.read_attribute(:foo)
         end
 
-        should 'transform the source attribute if a type was specified' do
+        should 'transform the source attribute if a type converter was specified' do
           type_a = mock('type_a')
           type_a.expects(:decode).with('Foo!').returns('_foo_')
           @class.simple_mapper.attributes[:foo].type = type_a
           assert_equal '_foo_', @instance.read_attribute(:foo)
+        end
+
+        should 'transform the source attribute if a type name was specified' do
+          foo_type = mock('foo_type')
+          foo_class = foo_type.class
+          foo_type.expects(:decode).once.with('Foo!').returns('Foo on Ewe!')
+          SimpleMapper::Attributes.expects(:type?).with(:foo_type).returns({
+            :name          => :foo_type,
+            :expected_type => foo_class,
+            :converter     => foo_type,
+          })
+          @class.simple_mapper.attributes[:foo].type = :foo_type
+
+          assert_equal 'Foo on Ewe!', @instance.read_attribute(:foo)
         end
 
         should 'not transform a written attribute when type was specified' do
