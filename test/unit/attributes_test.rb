@@ -87,6 +87,46 @@ class AttributesTest < Test::Unit::TestCase
       end
     end
 
+    context 'types registry' do
+      setup do
+        @fake_type = stub('fake_type')
+        @fake_expected_type = Class.new { attr_accessor :value }
+        @fake_type_symbol = :fake_for_test
+        @fake_registry_entry = {:name          => @fake_type_symbol,
+                                :expected_type => @fake_expected_type,
+                                :converter     => @fake_type,}
+      end
+
+      should 'provide a types registry hash' do
+        assert_equal Hash, SimpleMapper::Attributes.types.class
+      end
+
+      should 'provide type registration through :register_type' do
+        SimpleMapper::Attributes.register_type(@fake_type_symbol,
+                                               @fake_expected_type,
+                                               @fake_type)
+
+        assert_equal(@fake_registry_entry,
+                     SimpleMapper::Attributes.types[@fake_type_symbol])
+      end
+
+      should 'allow lookup of type info by name' do
+        SimpleMapper::Attributes.register_type(@fake_type_symbol,
+                                               @fake_expected_type,
+                                               @fake_type)
+        assert_equal(@fake_registry_entry,
+                     SimpleMapper::Attributes.type?(@fake_type_symbol))
+      end
+
+      should 'return nil on type lookup for unknown type' do
+        assert_equal nil, SimpleMapper::Attributes.type?(:i_do_not_exist)
+      end
+
+      teardown do
+        SimpleMapper::Attributes.types.delete @fake_type_symbol
+      end
+    end
+
     context 'inclusion should' do
       should 'provide a maps class method' do
         assert @class.respond_to?(:maps)

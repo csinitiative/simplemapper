@@ -19,6 +19,20 @@ module SimpleMapper
   end
 
   module Attributes
+    self.instance_eval do
+      def types
+        @types ||= {}
+      end
+
+      def type?(name)
+        types[name]
+      end
+
+      def register_type(name, expected_type, converter)
+        types[name] = {:name => name, :expected_type => expected_type, :converter => converter}
+      end
+    end
+
     def self.included(klass)
       klass.extend ClassMethods
     end
