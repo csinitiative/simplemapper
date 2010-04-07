@@ -36,6 +36,18 @@ class AttributesTest < Test::Unit::TestCase
         assert @class.new.respond_to?(:some_attribute=)
       end
 
+      should 'install attribute reader wrapping the read_attribute method' do
+        @mapper_instance = @class.new
+        @mapper_instance.expects(:read_attribute).with(:some_attribute).once
+        @mapper_instance.some_attribute
+      end
+
+      should 'install attribute writer wrapping the write_attribute method' do
+        @mapper_instance = @class.new
+        @mapper_instance.expects(:write_attribute).with(:some_attribute, :some_value).once
+        @mapper_instance.some_attribute = :some_value
+      end
+
       should 'add attribute object to attributes list' do
         attribs = @instance.attributes.inject({}) do |a, kvp|
           key, val = kvp
@@ -84,6 +96,81 @@ class AttributesTest < Test::Unit::TestCase
         assert @class.respond_to?(:simple_mapper)
         assert_equal SimpleMapper::Attributes::Manager, @class.simple_mapper.class
         assert_equal @class, @class.simple_mapper.applies_to
+      end
+    end
+
+    should 'return an empty hash for to_simple on an instance with no attributes' do
+      assert_equal({}, @class.new.to_simple)
+    end
+
+    context 'to_simple instance method' do
+      setup do
+        @class.maps :no_type
+      end
+
+      should 'return a hash with key/value per known attribute' do
+        @class.maps :other
+        @instance = @class.new( :no_type => 'no type', :other => 'Other!' )
+        assert_equal( {:no_type => 'no type', :other => 'Other!'}, @instance.to_simple )
+      end
+
+      should 'return hash whose key/value pairs follow attribute state' do
+        @class.maps :other
+        @instance = @class.new( :no_type => 'original', :other => 'original' )
+        @instance.other = 'updated'
+        assert_equal({:no_type => 'original', :other => 'updated'}, @instance.to_simple)
+      end
+
+      should 'map attributes to specified keys in returned hash' do
+        @class.maps :other, :key => :alt_key
+        @instance = @class.new
+        @instance.no_type = 'no type'
+        @instance.other = 'alt key'
+        assert_equal({:no_type => 'no type', :alt_key => 'alt key'}, @instance.to_simple)
+      end
+
+      should 'encode typed attribute values' do
+        @type = Object.new
+        @type.instance_eval do
+          def encode(value)
+            "encoded: #{value}"
+          end
+          def decode(value)
+            value
+          end
+        end
+        @class.maps :typed, :type => @type
+        @instance = @class.new( :typed => 'typed!' )
+        assert_equal 'encoded: typed!', @instance.to_simple[:typed]
+      end
+
+      context 'with :defined argument' do
+        should 'return a hash with key/value per defined attribute' do
+          @class.maps :undefined
+          assert_equal({:no_type => 'nt'}, @class.new({:no_type => 'nt'}).to_simple(:defined => true))
+        end
+
+        should 'return an empty hash if no attributes were set' do
+          assert_equal({}, @class.new.to_simple(:defined => true))
+        end
+      end
+
+      context 'with :changes argument' do
+        setup do
+          @class.maps :other
+          @instance = @class.new({:typed => 'typed', :other => 'other'})
+        end
+
+        should 'return an empty hash if no attributes were changed' do
+# TODO
+#          assert_equal({}, @instance.to_simple(:changed => true))
+        end
+
+        should 'return a hash of only the key/value pairs that were changed' do
+          @instance.other = 'udder'
+# TODO
+#          assert_equal({:other => 'udder'}, @instance.to_simple(:changed => true))
+        end
       end
     end
 

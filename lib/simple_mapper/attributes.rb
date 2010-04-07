@@ -34,8 +34,12 @@ module SimpleMapper
       end
     end
 
+    def attribute_object_for(attr)
+      self.class.simple_mapper.attributes[attr]
+    end
+
     def key_for(attr)
-      self.class.simple_mapper.attributes[attr].key
+      attribute_object_for(attr).key
     end
 
     def reset_attribute(attr)
@@ -77,6 +81,19 @@ module SimpleMapper
       @simple_mapper_init = {}
     end
 
+    def to_simple(options = {})
+      all = ! options[:defined]
+      attribs = self.class.simple_mapper.attributes.values
+      attribs.inject({}) do |accum, attrib|
+        val = read_attribute(attrib.name)
+        val = attrib.type.encode(val) if attrib.type
+        if all or ! val.nil?
+          accum[attrib.key] = val
+        end
+        accum
+      end
+    end
+
     class Manager
       attr_accessor :applies_to
 
@@ -93,8 +110,11 @@ module SimpleMapper
       end
 
       def install_attribute(attr, object)
+        read_body = Proc.new { read_attribute(attr) }
+        write_body = Proc.new {|value| write_attribute(attr, value)}
         applies_to.module_eval do
-          attr_accessor attr
+          define_method(attr, &read_body)
+          define_method(:"#{attr}=", &write_body)
         end
         attributes[attr] = object
       end
