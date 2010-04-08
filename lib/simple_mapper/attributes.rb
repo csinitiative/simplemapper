@@ -142,3 +142,7 @@ module SimpleMapper
     end
   end
 end
+
+require 'simple_mapper/exceptions'
+require 'simple_mapper/attributes/types'
+
