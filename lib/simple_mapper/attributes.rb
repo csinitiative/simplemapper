@@ -77,8 +77,13 @@ module SimpleMapper
     def transform_source_attribute(attr)
       val = read_source_attribute(attr)
       if type = self.class.simple_mapper.attributes[attr].type
-        converter = type.respond_to?(:decode) ? type : SimpleMapper::Attributes.type?(type)[:converter]
-        converter.decode(val)
+        return type.decode(val) if type.respond_to?(:decode)
+        registration = SimpleMapper::Attributes.type?(type)
+        if expected = registration[:expected_type] and val.instance_of? expected
+          val
+        else
+          registration[:converter].decode(val)
+        end
       else
         val
       end

@@ -275,6 +275,18 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Foo on Ewe!', @instance.read_attribute(:foo)
         end
 
+        should 'not transform the source attr if it is already of the expected type' do
+          foo_type = mock('foo too type')
+          foo_type.expects(:decode).never
+          SimpleMapper::Attributes.expects(:type?).with(:foo_type).returns({
+            :name          => :foo_type,
+            :expected_type => String,
+            :converter     => foo_type,
+          })
+          @class.simple_mapper.attributes[:foo].type = :foo_type
+          assert_equal 'Foo!', @instance.read_attribute(:foo)
+        end
+
         should 'not transform a written attribute when type was specified' do
           type_a = mock('type_a')
           type_a.expects(:decode).never
