@@ -130,11 +130,12 @@ module SimpleMapper
       else
         attribs = self.class.simple_mapper.attributes.values
       end
+      identifier = options[:string_keys] ? Proc.new {|item| item.key.to_s} : Proc.new {|item| item.key}
       attribs.inject({}) do |accum, attrib|
         val = read_attribute(attrib.name)
         val = attrib.encode(val) if attrib.type
         if all or ! val.nil?
-          accum[attrib.key] = val
+          accum[identifier.call(attrib)] = val
         end
         accum
       end

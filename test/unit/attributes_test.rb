@@ -169,6 +169,15 @@ class AttributesTest < Test::Unit::TestCase
         assert_equal({:no_type => 'no type', :alt_key => 'alt key'}, @instance.to_simple)
       end
 
+      should 'return a hash with strings for keys when :string_keys option is true' do
+        @class.maps :other, :key => :alt_key
+        @instance = @class.new
+        @instance.no_type = 'no type'
+        @instance.other = 'alt key'
+        assert_equal({'no_type' => 'no type', 'alt_key' => 'alt key'},
+                     @instance.to_simple(:string_keys => true))
+      end
+
       should 'encode typed attribute values for converter types' do
         @type = Object.new
         @type.instance_eval do
