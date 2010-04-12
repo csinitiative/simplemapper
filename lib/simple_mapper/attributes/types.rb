@@ -1,5 +1,5 @@
 module SimpleMapper::Attributes::Types
-  module Integer
+  module Float
     PATTERN = /^([0-9]+)(?:(\.)([0-9]*))?$/
     def self.decode(value)
       return nil if value.to_s.length == 0
@@ -17,5 +17,18 @@ module SimpleMapper::Attributes::Types
       value.to_f.to_s
     end
   end
-  SimpleMapper::Attributes.register_type(:float, Float, Integer)
+  SimpleMapper::Attributes.register_type(:float, ::Float, Float)
+
+  module String
+    def self.decode(value)
+      return nil if value.nil?
+      value.to_s
+    end
+
+    def self.encode(value)
+      return nil if value.nil?
+      value.to_s
+    end
+  end
+  SimpleMapper::Attributes.register_type(:string, ::String, String)
 end

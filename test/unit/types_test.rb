@@ -3,7 +3,7 @@ require 'test_helper'
 class AttributesTypesTest < Test::Unit::TestCase
   context 'The Float type' do
     setup do
-      @type = SimpleMapper::Attributes::Types::Integer
+      @type = SimpleMapper::Attributes::Types::Float
     end
 
     should 'decode the empty string to nil' do
@@ -56,6 +56,42 @@ class AttributesTypesTest < Test::Unit::TestCase
       assert_equal({:name          => :float,
                     :expected_type => Float,
                     :converter     => @type,}, SimpleMapper::Attributes.type?(:float))
+    end
+  end
+
+  context 'the String type' do
+    setup do
+      @type = SimpleMapper::Attributes::Types::String
+    end
+
+    should 'encode nil as nil' do
+      assert_equal nil, @type.encode(nil)
+    end
+
+    should 'decode nil as nil' do
+      assert_equal nil, @type.decode(nil)
+    end
+
+    context 'given input with to_s' do
+      setup do
+        @value = 'to_s result'
+        @input = mock('input')
+        @input.expects(:to_s).with.returns(@value)
+      end
+
+      should 'return result of :to_s on input for :encode' do
+        assert_equal @value, @type.encode(@input)
+      end
+
+      should 'return result of :to_s on input for :decode' do
+        assert_equal @value, @type.decode(@input)
+      end
+    end
+
+    should 'be registered as :string' do
+      assert_equal({:name          => :string,
+                    :expected_type => String,
+                    :converter     => @type,}, SimpleMapper::Attributes.type?(:string))
     end
   end
 end
