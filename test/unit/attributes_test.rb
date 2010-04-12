@@ -309,6 +309,13 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Blah!', @instance.read_attribute(:foo)
           assert_equal 'Foo!', @instance.read_source_attribute(:foo)
         end
+
+        should 'return the source attribute via string key if symbol key does not exist' do
+          @class.maps :some_attr
+          @instance = @class.new('foo' => 'Foo!', :some_attr => 'Some Attr')
+          assert_equal 'Foo!', @instance.read_attribute(:foo)
+          assert_equal 'Some Attr', @instance.read_attribute(:some_attr)
+        end
       end
       context 'write_attribute should' do
         should 'set the attribute as an instance variable' do

@@ -90,7 +90,8 @@ module SimpleMapper
     end
 
     def read_source_attribute(attr)
-      @simple_mapper_source[ key_for(attr) ]
+      key = key_for(attr)
+      @simple_mapper_source.has_key?(key) ? @simple_mapper_source[key] : @simple_mapper_source[key.to_s]
     end
 
     def read_attribute(attr)
