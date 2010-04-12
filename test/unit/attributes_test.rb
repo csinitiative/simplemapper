@@ -216,14 +216,12 @@ class AttributesTest < Test::Unit::TestCase
         end
 
         should 'return an empty hash if no attributes were changed' do
-# TODO
-#          assert_equal({}, @instance.to_simple(:changed => true))
+          assert_equal({}, @instance.to_simple(:changed => true))
         end
 
         should 'return a hash of only the key/value pairs that were changed' do
           @instance.other = 'udder'
-# TODO
-#          assert_equal({:other => 'udder'}, @instance.to_simple(:changed => true))
+          assert_equal({:other => 'udder'}, @instance.to_simple(:changed => true))
         end
       end
     end
@@ -305,6 +303,44 @@ class AttributesTest < Test::Unit::TestCase
           @instance.write_attribute(:foo_attr, 'Foo!')
           assert_equal 'Foo!', @instance.instance_variable_get(:@foo_attr)
         end
+      end
+    end
+
+    context 'change tracking' do
+      setup do
+        @class.maps :change_me
+        @class.maps :do_not_change_me
+        @instance = @class.new(:change_me => 'change me', :do_not_change_me => 'no changing')
+      end
+
+      should 'mark an attribute as unchanged if it has not been assigned' do
+        assert_equal false, @instance.attribute_changed?(:change_me)
+      end
+
+      should 'mark an attribute as changed once it has been assigned to' do
+        @instance.change_me = 'Thou art changed'
+        assert_equal true, @instance.attribute_changed?(:change_me)
+      end
+
+      should 'mark an attribute as changed via the :attribute_changed! method' do
+        assert_equal false, @instance.attribute_changed?(:change_me)
+        @instance.attribute_changed! :change_me
+        assert_equal true, @instance.attribute_changed?(:change_me)
+      end
+
+      should 'return empty list for :changed_attributes when nothing has been assigned' do
+        assert_equal [], @instance.changed_attributes
+      end
+
+      should 'return single-item list for :changed_attributes when one attribute was assigned' do
+        @instance.change_me = 'foo'
+        assert_equal [:change_me], @instance.changed_attributes
+      end
+
+      should 'return two-item list for :changed_attributes when both attrs were assigned' do
+        @instance.change_me = 'changed!'
+        @instance.do_not_change_me = 'I defy you'
+        assert_equal [:change_me, :do_not_change_me], @instance.changed_attributes.sort
       end
     end
 

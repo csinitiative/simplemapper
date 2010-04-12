@@ -70,6 +70,7 @@ module SimpleMapper
     def write_attribute(attr, value)
       instance_variable_set(:"@#{attr}", value)
       @simple_mapper_init[attr] = true
+      attribute_changed! attr
       value
     end
 
@@ -97,14 +98,32 @@ module SimpleMapper
       end
     end
 
+    def attribute_changed!(attr)
+      @simple_mapper_changes[attr] = true
+    end
+
+    def attribute_changed?(attr)
+      @simple_mapper_changes.has_key? attr
+    end
+
+    def changed_attributes
+      @simple_mapper_changes.keys
+    end
+
     def initialize(values = {})
       @simple_mapper_source = values
       @simple_mapper_init = {}
+      @simple_mapper_changes = {}
     end
 
     def to_simple(options = {})
       all = ! options[:defined]
-      attribs = self.class.simple_mapper.attributes.values
+      if options[:changed]
+        changes = changed_attributes
+        attribs = changes.size > 0 ? self.class.simple_mapper.attributes.values_at(*changes) : []
+      else
+        attribs = self.class.simple_mapper.attributes.values
+      end
       attribs.inject({}) do |accum, attrib|
         val = read_attribute(attrib.name)
         val = attrib.encode(val) if attrib.type
