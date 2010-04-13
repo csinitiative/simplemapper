@@ -31,4 +31,18 @@ module SimpleMapper::Attributes::Types
     end
   end
   SimpleMapper::Attributes.register_type(:string, ::String, String)
+
+  module SimpleUUID
+    require 'simple_uuid'
+    EXPECTED_CLASS = ::SimpleUUID::UUID
+
+    def self.encode(value)
+      value.nil? ? nil : value.to_s
+    end
+
+    def self.decode(value)
+      value.nil? ? nil : EXPECTED_CLASS.new(value)
+    end
+  end
+  SimpleMapper::Attributes.register_type(:simple_uuid, SimpleUUID::EXPECTED_CLASS, SimpleUUID)
 end

@@ -6,3 +6,5 @@ gem "rake"
 gem "shoulda"
 gem "mocha"
 
+# Required for the :simple_uuid attribute type
+gem 'simple_uuid'

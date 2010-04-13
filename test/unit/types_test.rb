@@ -94,4 +94,31 @@ class AttributesTypesTest < Test::Unit::TestCase
                     :converter     => @type,}, SimpleMapper::Attributes.type?(:string))
     end
   end
+
+  context 'the SimpleUUID type' do
+    setup do
+      @type = SimpleMapper::Attributes::Types::SimpleUUID
+      @class = SimpleUUID::UUID
+    end
+
+    should 'decode and encode nil as nil' do
+      [:decode, :encode].each {|op| assert_equal nil, @type.send(op, nil)}
+    end
+
+    should 'return string representation of UUID for :encode' do
+      @uuid = @class.new
+      assert_equal @uuid.to_s, @type.encode(@uuid)
+    end
+
+    should 'parse string and return SimpleUUID::UUID for :decode' do
+      @uuid = @class.new
+      assert_equal @uuid, @type.decode(@uuid.to_s)
+    end
+
+    should 'be registered as :simple_uuid' do
+      assert_equal({:name          => :simple_uuid,
+                    :expected_type => @class,
+                    :converter     => @type}, SimpleMapper::Attributes.type?(:simple_uuid))
+    end
+  end
 end
