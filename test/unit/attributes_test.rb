@@ -332,6 +332,45 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Foo!', @instance.instance_variable_get(:@foo_attr)
         end
       end
+      context 'get_attribute_default' do
+        should 'return nil if the attribute has no default specified' do
+          @class.maps :without_default
+          assert_equal nil, @instance.get_attribute_default(:without_default)
+        end
+
+        should 'invoke specified default symbol on instance if attr has default specified' do
+          @class.maps :with_default, :default => :some_default
+          @instance.expects(:some_default).once.with.returns('the default value')
+          assert_equal 'the default value', @instance.get_attribute_default(:with_default)
+        end
+
+        context 'with :default of :from_type' do
+          setup do
+            @expected_val = 'some default value'
+            @name = :with_default
+            @type = stub('type', :encode => nil, :decode => nil, :name => @name)
+            @type.expects(:default).once.with.returns(@expected_val)
+          end
+
+          should 'invoke :default on type converter if default is :from_type and :type is object' do
+            @class.maps :with_default, :type => @type, :default => :from_type
+            assert_equal @expected_val, @instance.get_attribute_default(:with_default)
+          end
+
+          should 'invoke :default on registered type if default is :from_type and :type is registered' do
+            begin
+              SimpleMapper::Attributes.stubs(:types).with.returns({@name => {
+                :name           => @name,
+                :expected_class => @type.class,
+                :converter      => @type}})
+              @class.maps :with_default, :type => @name, :default => :from_type
+              assert_equal @expected_val, @instance.get_attribute_default(:with_default)
+            ensure
+              SimpleMapper::Attributes.types.delete @type.name
+            end
+          end
+        end
+      end
     end
 
     context 'change tracking' do

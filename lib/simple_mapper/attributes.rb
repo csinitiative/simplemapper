@@ -1,10 +1,11 @@
 module SimpleMapper
   class Attribute
     Options = [
+      :default,
       :key,
       :type,
     ]
-    attr_accessor :key, :name, :type
+    attr_accessor :key, :name, :type, :default
 
     def initialize(name, options = {})
       self.key = self.name = name
@@ -101,6 +102,20 @@ module SimpleMapper
         result = instance_variable_set(:"@#{attr}", transform_source_attribute(attr))
         @simple_mapper_init[attr] = true
         result
+      end
+    end
+
+    def get_attribute_default(attr)
+      attribute = self.class.simple_mapper.attributes[attr]
+      case default = attribute.default
+        when :from_type
+          type = attribute.type
+          type = SimpleMapper::Attributes.type?(type)[:converter] unless type.respond_to?(:default)
+          type.default
+        when Symbol
+          self.send(default)
+        else
+          nil
       end
     end
 
