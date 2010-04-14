@@ -52,6 +52,10 @@ class AttributesTypesTest < Test::Unit::TestCase
       end
     end
 
+    should 'provide a default of nil' do
+      assert_equal nil, @type.default
+    end
+
     should 'be registered as :float' do
       assert_equal({:name          => :float,
                     :expected_type => Float,
@@ -88,6 +92,10 @@ class AttributesTypesTest < Test::Unit::TestCase
       end
     end
 
+    should 'provide empty string for the default' do
+      assert_equal '', @type.default
+    end
+
     should 'be registered as :string' do
       assert_equal({:name          => :string,
                     :expected_type => String,
@@ -113,6 +121,12 @@ class AttributesTypesTest < Test::Unit::TestCase
     should 'parse string and return SimpleUUID::UUID for :decode' do
       @uuid = @class.new
       assert_equal @uuid, @type.decode(@uuid.to_s)
+    end
+
+    should 'a new SimpleUUID::UUID instance for the default' do
+      assert_equal @class, (first = @type.default).class
+      assert_equal @class, (second = @type.default).class
+      assert_not_equal first, second
     end
 
     should 'be registered as :simple_uuid' do

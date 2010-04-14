@@ -16,6 +16,10 @@ module SimpleMapper::Attributes::Types
       raise(SimpleMapper::TypeConversionException, "Cannot encode '#{value}' as Float.") if value.respond_to?(:match) and not value.match(PATTERN)
       value.to_f.to_s
     end
+
+    def self.default
+      nil
+    end
   end
   SimpleMapper::Attributes.register_type(:float, ::Float, Float)
 
@@ -28,6 +32,10 @@ module SimpleMapper::Attributes::Types
     def self.encode(value)
       return nil if value.nil?
       value.to_s
+    end
+
+    def self.default
+      ''
     end
   end
   SimpleMapper::Attributes.register_type(:string, ::String, String)
@@ -42,6 +50,10 @@ module SimpleMapper::Attributes::Types
 
     def self.decode(value)
       value.nil? ? nil : EXPECTED_CLASS.new(value)
+    end
+
+    def self.default
+      EXPECTED_CLASS.new
     end
   end
   SimpleMapper::Attributes.register_type(:simple_uuid, SimpleUUID::EXPECTED_CLASS, SimpleUUID)
