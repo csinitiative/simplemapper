@@ -249,7 +249,7 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Foo!', @instance.read_attribute(:foo)
         end
       end
-      context 'read_attribute should' do
+      context 'read_attribute' do
         setup do
           @instance = @class.new(:foo => 'Foo!', :some_attr => 'Some Attr')
         end
@@ -263,25 +263,56 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal 'Blah!', @instance.read_attribute(:foo)
         end
 
-        should 'transform the source attribute if a type converter was specified' do
-          type_a = mock('type_a')
-          type_a.expects(:decode).with('Foo!').returns('_foo_')
-          @class.simple_mapper.attributes[:foo].type = type_a
-          assert_equal '_foo_', @instance.read_attribute(:foo)
+        should 'return the attribute default if source attribute is nil' do
+          @instance = @class.new
+          @instance.expects(:get_attribute_default).with(:foo).returns('foo default')
+          assert_equal 'foo default', @instance.read_attribute(:foo)
         end
 
-        should 'transform the source attribute if a type name was specified' do
-          foo_type = mock('foo_type')
-          foo_class = foo_type.class
-          foo_type.expects(:decode).once.with('Foo!').returns('Foo on Ewe!')
-          SimpleMapper::Attributes.expects(:type?).with(:foo_type).returns({
-            :name          => :foo_type,
-            :expected_type => foo_class,
-            :converter     => foo_type,
-          })
-          @class.simple_mapper.attributes[:foo].type = :foo_type
+        context 'with a type converter' do
+          setup do
+            @expected_out = '_foo_'
+            @expected_in = 'Foo!'
+            @type_a = mock('type_a')
+            @type_a.expects(:decode).with(@expected_in).returns(@expected_out)
+            @class.simple_mapper.attributes[:foo].type = @type_a
+          end
 
-          assert_equal 'Foo on Ewe!', @instance.read_attribute(:foo)
+          should 'transform the source attribute if a type converter was specified' do
+            assert_equal @expected_out, @instance.read_attribute(:foo)
+          end
+
+          should 'transform the default value if a type converter was specified' do
+            @instance = @class.new
+            @instance.stubs(:get_attribute_default).with(:foo).returns(@expected_in)
+            assert_equal @expected_out, @instance.read_attribute(:foo)
+          end
+        end
+
+        context 'with a type name' do
+          setup do
+            foo_type = mock('foo_type')
+            foo_class = foo_type.class
+            @expected_in = 'Foo!'
+            @expected_out = 'Foo on Ewe!'
+            foo_type.expects(:decode).once.with(@expected_in).returns(@expected_out)
+            SimpleMapper::Attributes.stubs(:types).with.returns({:foo_type => {
+              :name          => :foo_type,
+              :expected_type => foo_class,
+              :converter     => foo_type,
+            }})
+            @class.simple_mapper.attributes[:foo].type = :foo_type
+          end
+
+          should 'transform the source attribute if a type name was specified' do
+            assert_equal @expected_out, @instance.read_attribute(:foo)
+          end
+
+          should 'transform the default value if the source is nil' do
+            @instance = @class.new
+            @instance.stubs(:get_attribute_default).with(:foo).returns(@expected_in)
+            assert_equal @expected_out, @instance.read_attribute(:foo)
+          end
         end
 
         should 'not transform the source attr if it is already of the expected type' do

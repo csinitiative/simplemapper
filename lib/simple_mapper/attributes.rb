@@ -77,6 +77,7 @@ module SimpleMapper
 
     def transform_source_attribute(attr)
       val = read_source_attribute(attr)
+      val = get_attribute_default(attr) if val.nil?
       if type = self.class.simple_mapper.attributes[attr].type
         return type.decode(val) if type.respond_to?(:decode)
         registration = SimpleMapper::Attributes.type?(type)
