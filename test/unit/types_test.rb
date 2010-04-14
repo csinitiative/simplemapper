@@ -10,9 +10,17 @@ class AttributesTypesTest < Test::Unit::TestCase
       assert_equal nil, @type.decode('')
     end
 
-    should 'decode simple integers' do
+    should 'decode simple integer strings' do
       [1, 2, 3, 5, 7, 11, 13, 17, 21129].each do |num|
         result = @type.decode(num.to_s)
+        assert_equal Float, result.class
+        assert_equal num.to_f, result
+      end
+    end
+
+    should 'decode actual integers' do
+      [1, 13, 21000, 4600].each do |num|
+        result = @type.decode(num)
         assert_equal Float, result.class
         assert_equal num.to_f, result
       end

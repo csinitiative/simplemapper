@@ -25,9 +25,9 @@ module SimpleMapper::Attributes::Types
     #
     # The empty string will result in a value of +nil+
     def self.decode(value)
-      return nil if value.to_s.length == 0
+      return nil if (str = value.to_s).length == 0
       return value if Float === value
-      match = value.match(PATTERN)
+      match = str.match(PATTERN)
       raise(SimpleMapper::TypeConversionException, "Cannot decode '#{value}' to Float.") unless match
       value = match[1]
       value += match[2] + match[3] if match[3].to_s.length > 0
