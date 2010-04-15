@@ -82,31 +82,39 @@ module SimpleMapper::Attributes::Types
   # Provides basic UUID type support derived from the +simple_uuid+ gem.
   #
   # Passes nils through unchanged, but otherwise expects to work with
-  # instances of <tt>SimpleUUID::UUID</tt>.  Encoding/decoding converts
-  # between instances of this class and a byte string (which the class
-  # itself supports).
+  # instances of <tt>SimpleUUID::UUID</tt> or GUID strings.  Attributes
+  # using this type will store the data simply as a GUID-conforming string
+  # as implemented by +SimpleUUID::UUID#to_guid+.  For both decoding and
+  # encoding, a GUID string or an actual +SimpleUUID::UUID+ instance may
+  # be provided, but the result is always the corresponding GUID string.
   #
   # Registered as <tt>:simple_uuid</tt>.
   module SimpleUUID
     require 'simple_uuid'
     EXPECTED_CLASS = ::SimpleUUID::UUID
 
-    # Encoded a <tt>SimpleUUID::UUID</tt> instance as a byte string.
+    # Encoded a <tt>SimpleUUID::UUID</tt> instance, or a GUID string,
+    # as a GUID string.  GUID strings for +value+ will be validated by
+    # +SimpleUUID::UUID+ prior to passing through as the result.
+    #
     # Passes nils through unchanged.
     def self.encode(value)
-      value.nil? ? nil : value.to_s
+      value.nil? ? nil : EXPECTED_CLASS.new(value).to_guid
     end
 
-    # Decode a byte string into a <tt>SimpleUUID::UUID</tt> instance.
+    # Decode a <tt>SimpleUUID::UUID</tt> instance or GUID string into
+    # validated GUID string; strings will be validated by +SimpleUUID::UUID+
+    # prior to passing through as the result.
+    #
     # Passes nils through unchanged.
     def self.decode(value)
-      value.nil? ? nil : EXPECTED_CLASS.new(value)
+      value.nil? ? nil : EXPECTED_CLASS.new(value).to_guid
     end
 
-    # Returns a new <tt>SimpleUUID::UUID</tt> instance.
+    # Returns a new GUID string value.
     def self.default
-      EXPECTED_CLASS.new
+      EXPECTED_CLASS.new.to_guid
     end
   end
-  SimpleMapper::Attributes.register_type(:simple_uuid, SimpleUUID::EXPECTED_CLASS, SimpleUUID)
+  SimpleMapper::Attributes.register_type(:simple_uuid, nil, SimpleUUID)
 end

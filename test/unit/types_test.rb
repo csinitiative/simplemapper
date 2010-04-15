@@ -121,25 +121,40 @@ class AttributesTypesTest < Test::Unit::TestCase
       [:decode, :encode].each {|op| assert_equal nil, @type.send(op, nil)}
     end
 
-    should 'return string representation of UUID for :encode' do
+    should 'return GUID string representation for :encode of actual UUID object' do
       @uuid = @class.new
-      assert_equal @uuid.to_s, @type.encode(@uuid)
+      result = @type.encode(@uuid)
+      assert_equal String, result.class
+      assert_equal @uuid.to_guid, result
     end
 
-    should 'parse string and return SimpleUUID::UUID for :decode' do
+    should 'return GUID string representation for :encode of a GUID-conforming string' do
       @uuid = @class.new
-      assert_equal @uuid, @type.decode(@uuid.to_s)
+      result = @type.encode(@uuid.to_guid)
+      assert_equal String, result.class
+      assert_equal @uuid.to_guid, result
     end
 
-    should 'a new SimpleUUID::UUID instance for the default' do
-      assert_equal @class, (first = @type.default).class
-      assert_equal @class, (second = @type.default).class
+    should 'parse string and return GUID-conforming string for :decode' do
+      @uuid = @class.new
+      assert_equal @uuid.to_guid, @type.decode(@uuid.to_guid)
+    end
+
+    should ':decode a SimpleUUID::UUID instance to a GUID string' do
+      @uuid = @class.new
+      assert_equal @uuid.to_guid, @type.decode(@uuid)
+    end
+
+    should 'a new SimpleUUID::UUID-based GUID string for the default' do
+      assert_equal String, (first = @type.default).class
+      assert_equal String, (second = @type.default).class
       assert_not_equal first, second
+      assert_not_equal @class.new(first).to_guid, @class.new(second).to_guid
     end
 
     should 'be registered as :simple_uuid' do
       assert_equal({:name          => :simple_uuid,
-                    :expected_type => @class,
+                    :expected_type => nil,
                     :converter     => @type}, SimpleMapper::Attributes.type?(:simple_uuid))
     end
   end
