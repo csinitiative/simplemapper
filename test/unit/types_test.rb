@@ -150,6 +150,8 @@ class AttributesTypesTest < Test::Unit::TestCase
       assert_equal String, (second = @type.default).class
       assert_not_equal first, second
       assert_not_equal @class.new(first).to_guid, @class.new(second).to_guid
+      assert_equal first, @class.new(first).to_guid
+      assert_equal second, @class.new(second).to_guid
     end
 
     should 'be registered as :simple_uuid' do
