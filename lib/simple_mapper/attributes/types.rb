@@ -99,7 +99,7 @@ module SimpleMapper::Attributes::Types
     #
     # Passes nils through unchanged.
     def self.encode(value)
-      value.nil? ? nil : EXPECTED_CLASS.new(value).to_guid
+      normalize(value)
     end
 
     # Decode a <tt>SimpleUUID::UUID</tt> instance or GUID string into
@@ -108,6 +108,10 @@ module SimpleMapper::Attributes::Types
     #
     # Passes nils through unchanged.
     def self.decode(value)
+      normalize(value)
+    end
+
+    def self.normalize(value)
       value.nil? ? nil : EXPECTED_CLASS.new(value).to_guid
     end
 
