@@ -438,7 +438,7 @@ class AttributesTest < Test::Unit::TestCase
       should 'return two-item list for :changed_attributes when both attrs were assigned' do
         @instance.change_me = 'changed!'
         @instance.do_not_change_me = 'I defy you'
-        assert_equal [:change_me, :do_not_change_me], @instance.changed_attributes.sort
+        assert_equal([:change_me, :do_not_change_me], @instance.changed_attributes.sort_by {|sym| sym.to_s})
       end
     end
 

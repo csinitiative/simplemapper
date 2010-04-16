@@ -31,14 +31,16 @@ module SimpleMapper::Attributes::Types
       raise(SimpleMapper::TypeConversionException, "Cannot decode '#{value}' to Float.") unless match
       value = match[1]
       value += match[2] + match[3] if match[3].to_s.length > 0
-      value.to_f
+      value.to_s.to_f
     end
 
     # Encodes a float-like +value+ as a string, conforming to the basic
     # syntax used for +decode+.
     def self.encode(value)
       return nil if value.nil?
-      raise(SimpleMapper::TypeConversionException, "Cannot encode '#{value}' as Float.") if value.respond_to?(:match) and not value.match(PATTERN)
+      if ! value.respond_to?(:to_f) or value.respond_to?(:match) && ! value.match(PATTERN)
+        raise(SimpleMapper::TypeConversionException, "Cannot encode '#{value}' as Float.")
+      end
       value.to_f.to_s
     end
 
