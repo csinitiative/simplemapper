@@ -121,4 +121,47 @@ module SimpleMapper::Attributes::Types
     end
   end
   SimpleMapper::Attributes.register_type(:simple_uuid, nil, SimpleUUID)
+
+  # Provides timezone-aware second-resolution timestamp support for
+  # basic attributes.
+  #
+  # Attributes of this type will have values that are instances of +DateTime+.
+  # These +DateTime+ values will be reduced to strings of format +'%Y-%m-%d %H:%M:%S%z'+
+  # when converting to a simple structure.
+  #
+  # On input, a +DateTime+ instance or a string matching the above format will be
+  # accepted and map to the proper +DateTime+.
+  #
+  # Decoding or encoding nils will simply pass nil through.
+  #
+  # Registered as type +:timestamp+
+  module Timestamp
+    require 'date'
+
+    FORMAT = '%Y-%m-%d %H:%M:%S%z'
+
+    # Encode a +DateTime+ _value_ as a string of format +'%Y-%m-%d %H:%M:%S%z'+.
+    # Given +nil+ for _value, +nil+ will be returned.
+    def self.encode(value)
+     return nil if value.nil?
+     value.strftime FORMAT
+    end
+
+    # Decode a _value_ string of format +'%Y-%m-%d %H:%M:%S%z' into a +DateTime+ instance.
+    # If given a +DateTime+ instance for _value_, that instance will be returned.
+    # Given +nil+ for _value_, +nil+ will be returned.
+    def self.decode(value)
+      return nil if value.nil?
+      return value if value.instance_of? DateTime
+      DateTime.strptime(value, FORMAT)
+    end
+
+    # Return a new +DateTime+ instance representing the current time.  Note that this
+    # will include fractional seconds; this precision is lost when encoded to string,
+    # as the string representation only has a precision to the second.
+    def self.default
+      DateTime.now
+    end
+  end
+  SimpleMapper::Attributes.register_type(:timestamp, DateTime, Timestamp)
 end

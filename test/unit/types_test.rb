@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'date'
 
 class AttributesTypesTest < Test::Unit::TestCase
   context 'The Float type' do
@@ -158,6 +159,46 @@ class AttributesTypesTest < Test::Unit::TestCase
       assert_equal({:name          => :simple_uuid,
                     :expected_type => nil,
                     :converter     => @type}, SimpleMapper::Attributes.type?(:simple_uuid))
+    end
+  end
+
+  context 'the Timestamp type' do
+    setup do
+      @type = SimpleMapper::Attributes::Types::Timestamp
+      @class = DateTime
+      @format = '%Y-%m-%d %H:%M:%S%z'
+      # get time with appropriate resolution
+      @now = @class.strptime(@class.now.strftime(@format), @format)
+    end
+
+    should ':decode a timestamp string with %Y-%m-%d %H:%M:%S%z' do
+      result = @type.decode(@now.strftime(@format))
+      assert_equal @now, result
+    end
+
+    should ':encode a timestamp as string with %Y-%m-%d %H:%M:%S%z structure' do
+      assert_equal @now.strftime(@format), @type.encode(@now)
+    end
+
+    should 'pass nil through untouched for :encode and :decode' do
+      assert_equal nil, @type.encode(nil)
+      assert_equal nil, @type.decode(nil)
+    end
+
+    should 'provide current date/time as default' do
+      # yes, if another process/thread preempts this one on a heavily-loaded server,
+      # there's a possibility that these won't match.  I'm willing to live with that.
+      assert_equal @now.strftime(@format), (default = @type.default) && default.strftime(@format)
+    end
+
+    should ':decode a DateTime instance as identity (pass through)' do
+      assert_equal @now, @type.decode(@now)
+    end
+
+    should 'be registered as :timestamp type' do
+      assert_equal({:name          => :timestamp,
+                    :expected_type => @class,
+                    :converter     => @type}, SimpleMapper::Attributes.type?(:timestamp))
     end
   end
 end
