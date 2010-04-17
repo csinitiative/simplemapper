@@ -49,7 +49,12 @@ module SimpleMapper
         @simple_mapper ||= SimpleMapper::Attributes::Manager.new(self)
       end
 
-      def maps(attr, *args)
+      def maps(attr, *args, &block)
+        if block_given?
+          hash = args.last
+          args << (hash = {}) unless hash.instance_of? Hash
+          hash[:type] = simple_mapper.create_anonymous_mapper(&block)
+        end
         attribute = simple_mapper.create_attribute(attr, *args)
         simple_mapper.install_attribute attr, attribute
       end
@@ -184,6 +189,17 @@ module SimpleMapper
           define_method(:"#{attr}=", &write_body)
         end
         attributes[attr] = object
+      end
+
+      def create_anonymous_mapper(&block)
+        mapper = Class.new do
+          include SimpleMapper::Attributes
+          def self.decode(*arg)
+            new(*arg)
+          end
+        end
+        mapper.module_eval &block if block_given?
+        mapper
       end
     end
   end

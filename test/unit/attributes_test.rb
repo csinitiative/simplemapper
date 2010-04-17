@@ -23,6 +23,27 @@ class AttributesTest < Test::Unit::TestCase
       assert_equal self.class, @instance.applies_to
     end
 
+    context 'when creating an anonymous mapper' do
+      should 'return a class that is mapper-enabled' do
+        result = @instance.create_anonymous_mapper
+        assert_equal Class, result.class
+        assert result.respond_to?(:maps)
+        assert result.new.respond_to?(:to_simple)
+        assert result.respond_to?(:decode)
+        # decode should just wrap the constructor
+        assert_equal result, result.decode.class
+      end
+
+      should 'eval a block within the context of the anonymous class' do
+        result = @instance.create_anonymous_mapper do
+          def self.platypus; 'platypus?'; end
+          def walrus; 'walrus?'; end
+        end
+        assert_equal 'platypus?', result.platypus
+        assert_equal 'walrus?', result.new.walrus
+      end
+    end
+
     context 'when installing attributes should' do
       setup do
         @class = Class.new
@@ -502,6 +523,51 @@ class AttributesTest < Test::Unit::TestCase
         assert_equal type_a, @class.simple_mapper.attributes[:foo].type
         assert_equal type_b, @class.simple_mapper.attributes[:bar].type
       end
+
+      should 'create an anonymous mapper as the type when given a block' do
+        @class.maps :outer do; end
+        assert @class.simple_mapper.attributes[:outer].type.respond_to?(:maps)
+        assert @class.simple_mapper.attributes[:outer].type.respond_to?(:new)
+        assert @class.simple_mapper.attributes[:outer].type.respond_to?(:decode)
+      end
+    end
+  end
+
+  context 'with full nested mappers' do
+    setup do
+      @class = Class.new do
+        include SimpleMapper::Attributes
+        maps :id
+        maps :email
+        maps :home_address do
+          maps :address
+          maps :city
+          maps :state
+          maps :zip
+        end
+      end
+      @source = {:id           => 'foo',
+                 :email        => 'aardvark@pyongyang.yumm.com',
+                 :home_address => {
+                   :address    => '54 Gorgeous Gorge Parkway',
+                   :city       => 'Here',
+                   :state      => 'TX',
+                   :zip        => '04435'}}
+      @instance = @class.new(@source)
+    end
+
+    should 'map to instance appropriately' do
+      assert_equal @class, @instance.class
+      assert_equal @source[:id], @instance.id
+      assert_equal @source[:email], @instance.email
+      assert_equal @source[:home_address][:address], @instance.home_address.address
+      assert_equal @source[:home_address][:city], @instance.home_address.city
+      assert_equal @source[:home_address][:state], @instance.home_address.state
+      assert_equal @source[:home_address][:zip], @instance.home_address.zip
+    end
+
+    should 'map back to simple structure' do
+      assert_equal @source, @instance.to_simple
     end
   end
 end
