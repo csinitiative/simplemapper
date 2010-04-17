@@ -233,6 +233,26 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal({:other => 'udder'}, @instance.to_simple(:changed => true))
         end
       end
+
+      context 'with an attribute value that supports to_simple' do
+        setup do
+          @class.maps :other
+          @instance = @class.new({:no_type => 'no type',
+                                  :other => (@mock = stub('to_simple_supporter'))})
+        end
+
+        should 'invoke to_simple on attribute value rather than encode' do
+          @mock.expects(:to_simple).returns('to simple')
+          assert_equal({:no_type => 'no type', :other => 'to simple'},
+                       @instance.to_simple)
+        end
+
+        should 'pass outer to_simple arguments along to inner to_simple' do
+          options = {:foo => 'floppy', :foot => 'fungi'}
+          @mock.expects(:to_simple).with(options).returns(nil)
+          @instance.to_simple(options)
+        end
+      end
     end
 
     context 'instance method' do
