@@ -20,7 +20,7 @@ module SimpleMapper
 
     def encode(value)
       return value unless type
-      converter = type.respond_to?(:encode) ? type : SimpleMapper::Attributes.type?(type)[:converter]
+      converter = type.respond_to?(:encode) ? type : SimpleMapper::Attributes.type_for(type)[:converter]
       converter.encode(value)
     end
   end
@@ -31,7 +31,7 @@ module SimpleMapper
         @types ||= {}
       end
 
-      def type?(name)
+      def type_for(name)
         types[name]
       end
 
@@ -80,7 +80,7 @@ module SimpleMapper
       val = get_attribute_default(attr) if val.nil?
       if type = self.class.simple_mapper.attributes[attr].type
         return type.decode(val) if type.respond_to?(:decode)
-        registration = SimpleMapper::Attributes.type?(type)
+        registration = SimpleMapper::Attributes.type_for(type)
         if expected = registration[:expected_type] and val.instance_of? expected
           val
         else
@@ -111,7 +111,7 @@ module SimpleMapper
       case default = attribute.default
         when :from_type
           type = attribute.type
-          type = SimpleMapper::Attributes.type?(type)[:converter] unless type.respond_to?(:default)
+          type = SimpleMapper::Attributes.type_for(type)[:converter] unless type.respond_to?(:default)
           type.default
         when Symbol
           self.send(default)

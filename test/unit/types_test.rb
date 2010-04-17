@@ -68,7 +68,7 @@ class AttributesTypesTest < Test::Unit::TestCase
     should 'be registered as :float' do
       assert_equal({:name          => :float,
                     :expected_type => Float,
-                    :converter     => @type,}, SimpleMapper::Attributes.type?(:float))
+                    :converter     => @type,}, SimpleMapper::Attributes.type_for(:float))
     end
   end
 
@@ -108,7 +108,7 @@ class AttributesTypesTest < Test::Unit::TestCase
     should 'be registered as :string' do
       assert_equal({:name          => :string,
                     :expected_type => String,
-                    :converter     => @type,}, SimpleMapper::Attributes.type?(:string))
+                    :converter     => @type,}, SimpleMapper::Attributes.type_for(:string))
     end
   end
 
@@ -158,7 +158,7 @@ class AttributesTypesTest < Test::Unit::TestCase
     should 'be registered as :simple_uuid' do
       assert_equal({:name          => :simple_uuid,
                     :expected_type => nil,
-                    :converter     => @type}, SimpleMapper::Attributes.type?(:simple_uuid))
+                    :converter     => @type}, SimpleMapper::Attributes.type_for(:simple_uuid))
     end
   end
 
@@ -198,7 +198,7 @@ class AttributesTypesTest < Test::Unit::TestCase
     should 'be registered as :timestamp type' do
       assert_equal({:name          => :timestamp,
                     :expected_type => @class,
-                    :converter     => @type}, SimpleMapper::Attributes.type?(:timestamp))
+                    :converter     => @type}, SimpleMapper::Attributes.type_for(:timestamp))
     end
   end
 end

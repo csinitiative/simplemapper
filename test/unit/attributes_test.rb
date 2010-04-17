@@ -115,11 +115,11 @@ class AttributesTest < Test::Unit::TestCase
                                                @fake_expected_type,
                                                @fake_type)
         assert_equal(@fake_registry_entry,
-                     SimpleMapper::Attributes.type?(@fake_type_symbol))
+                     SimpleMapper::Attributes.type_for(@fake_type_symbol))
       end
 
       should 'return nil on type lookup for unknown type' do
-        assert_equal nil, SimpleMapper::Attributes.type?(:i_do_not_exist)
+        assert_equal nil, SimpleMapper::Attributes.type_for(:i_do_not_exist)
       end
 
       teardown do
@@ -197,7 +197,7 @@ class AttributesTest < Test::Unit::TestCase
         @type = mock('type')
         @type.expects(:encode).once.with('typed!').returns('encoded!')
         @type.stubs(:decode).returns('typed!')
-        SimpleMapper::Attributes.expects(:type?).with(:type).at_least_once.returns({
+        SimpleMapper::Attributes.expects(:type_for).with(:type).at_least_once.returns({
           :name          => :type,
           :expected_type => @type.class,
           :converter     => @type,
@@ -318,7 +318,7 @@ class AttributesTest < Test::Unit::TestCase
         should 'not transform the source attr if it is already of the expected type' do
           foo_type = mock('foo too type')
           foo_type.expects(:decode).never
-          SimpleMapper::Attributes.expects(:type?).with(:foo_type).returns({
+          SimpleMapper::Attributes.expects(:type_for).with(:foo_type).returns({
             :name          => :foo_type,
             :expected_type => String,
             :converter     => foo_type,
