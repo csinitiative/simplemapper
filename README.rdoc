@@ -1,0 +1,165 @@
+= SimpleMapper: A Non-Relational Object Mapper
+
+The simple data structures expressed through JSON are becoming more relevant every day.
+We use them to exchange information between services via Thrift, from server to HTTP
+client for RESTful services, or from server to HTTP client for Ajax-heavy web applications.
+
+While JSON structures map nicely to core Ruby objects (Hash, Array, etc.), those structures
+themselves do not provide business logic specific to an application's problem domain.
+Additionally, it is increasingly the case that the JSON object structure is the canonical
+representation your application receives for a given entity; a Thrift client, for instance,
+will send and receive JSON to the corresponding service.
+
+The object-relational mapper (ORM) traditionally addresses the need for business logic and
+domain-specific semantics at the application tier when working with a provider of structured
+data (i.e. a SQL-compliant relational database).  SimpleMapper attempts to provide something
+somewhat analogous to the ORM, but with JSON-based or "simple" data structures as the foundation
+for structuring data, rather than a relational model of classes/relations and their constraints,
+references, etc.
+
+= What?
+
+Say you need a service that serves and accepts JSON structures representing "users"
+(because, really, who doesn't need _that_ service?).  You might see data structures
+like this (in JSON):
+
+    {
+        id:            '348179ce-4d38-11df-8f4f-cd459e8422de',
+        registered_at: '2010-04-01 09:22:17-0400',
+        email:         'mister_hot_pantz@example.com',
+        title:         'Mr.',
+        first_name:    'Hot',
+        last_name:     'Pantz',
+        address:       {
+            address:  'One My Way',
+            address2: 'Not That Way',
+            city:     'New York',
+            state:    'NY',
+            postal:   '10010'
+        }
+    }
+
+That's not a particularly complex data structure, but let's note a few things:
+*    The +:id+ appears to be a GUID.  Fun.
+*    The +:registered_at+ is a timestamp with a particular format.  Also fun.
+*    There's an +:email+ address.  More fun.
+
+All of those things and their noted funness would benefit from business logic for validation
+purposes, encapsulation, etc.  Our OOPified brains long for these structures to map to
+an object.
+
+So, go ahead.
+
+    class User
+      # Get our attribute mapping magic
+      include SimpleMapper::Attributes
+      
+      # Define our typed attributes
+      maps :id,            :type => :simple_uuid, :default => :from_type
+      maps :registered_at, :type => :timestamp,   :default => :from_type
+
+      # Simple string attributes don't need a type
+      maps :email
+      maps :title
+      maps :first_name
+      maps :last_name
+
+      # nested attribute for the address.
+      maps :address do
+        # This block is evaluated in the context of new
+        # class that has the SimpleMapper behaviors
+        [:address, :address2, :city, :state, :postal].each {|attr| maps attr}
+
+        # How about a to_s that represents the full address as one string?
+        def to_s
+          "#{address}; #{address2}; #{city}, #{state} #{postal}"
+        end
+      end
+    end
+
+Now you have a class that describes the data structure you're working with.
+What now?
+
+You can create new objects and spit out the simple structure.
+
+    user = User.new(:email      => 'mister_hot_pantz@example.com',
+                    :title      => 'Mr.',
+                    :first_name => 'Hot',
+                    :last_name  => 'Pantz',
+                    :address    => {:address  => 'One My Way',
+                                    :address2 => 'Not That Way',
+                                    :city     => 'New York',
+                                    :state    => 'NY',
+                                    :postal   => '10010'})
+    # the :simple_uuid type gives GUIDs, with a :default of :from_type
+    # meaning it'll autopopulate
+    # This prints some GUID like '348179ce-4d38-11df-8f4f-cd459e8422de':
+    puts user.id
+
+    # And the :default of :from_type on a :timestamp type gets the current date/time.
+    # This will print 'DateTime'
+    puts user.registered_at.class
+    # This will print it using DateTime's default :to_s format
+    # like '2010-0421T07:41:46-04:00'
+    puts user.registered_at
+
+    # This will print out 'One My Way; Not That Way; New York, NY 10010':
+    puts user.address
+
+    # The :to_simple method dumps the structure out in simple object format,
+    # which is readily JSON-ifiable.  However, it'll enforce defaults and type
+    # formatting and such, so that things like timestamps will be stringified with
+    # the correct format.
+    user.to_simple
+
+    # Results in a structure like:
+    {
+        :id            => '348179ce-4d38-11df-8f4f-cd459e8422de',
+        :registered_at => '2010-04-21 07:41:46-04:00',
+        :email         => 'mister_hot_pantz@example.com',
+        :title         => 'Mr.',
+        :first_name    => 'Hot',
+        :last_name     => 'Pantz',
+        :address       => {
+            :address  => 'One My Way',
+            :address2 => 'Not That Way',
+            :city     => 'New York',
+            :state    => 'NY',
+            :postal   => '10010',
+        },
+    }
+
+So, the +:new+ constructor and the +:to_simple+ method give you input and output
+from/to simple structures, while the +SimpleMapper::Attributes+ module gives you
+semantics for defining higher-level classes on top of those simple structures.
+
+What if my service needs to have something analogous to an update, such that I only
+get the simple structure for attributes that were changed?
+
+    user.last_name = 'Pantalonez'
+    user.to_simple(:changed => true)
+    # Results in:
+    # { :last_name => 'Pantalonez' }
+
+The +:changed+ option indicates that we only want attributes that were altered since
+the instance was instantiated.  It doesn't care if the values actually differ from the
+original, it only cares if the attribute was assigned since creation.
+
+Similarly, you can provide a +:defined+ option to the +:to_simple+ invocation, and
+you'll only get attributes in the resulting structure that have a non-nil value.
+This is useful if you're ultimately dealing with a data source that manages such
+things itself (like allowing +NULL+ on a particular database column) or is sparse
+and would thus prefer to not have any entry for an undefined value at all (like
+Cassandra, MongoDB, etc.)
+
+= What's Coming
+
+SimpleMapper is young as of this writing.  There's a basic type system with
+defaults.  Support for nested structures is pretty simple, as shown above.
+
+Features expected in the near future include:
+* collections: deal with an attribute that is a collection
+* pattern-based collections: group all key/value pairs into a single collection attribute
+  for any keys that match a developer-specific pattern
+* ActiveModel compliance to allow validation, callbacks, etc.
+
