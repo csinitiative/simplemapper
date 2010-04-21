@@ -1,3 +1,4 @@
+require 'rake'
 Gem::Specification.new do |s|
   s.name     = 'simple_mapper'
   s.version  = '0.0.1'
@@ -15,8 +16,7 @@ Gem::Specification.new do |s|
   s.add_dependency('shoulda')
   s.add_dependency('mocha')
 
-  candidates = Dir['*.rb'] + Dir['*.rdoc'] + Dir['lib/**/*'] + Dir['test/**/*']
-  s.files = candidates.delete_if {|file| file.include?('.git')}
+  s.files = FileList['*.rb', '*.rdoc', 'lib/**/*.rb', 'test/**/*.rb'].to_a
   s.require_path = 'lib'
   s.has_rdoc = true
 
