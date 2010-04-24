@@ -1,30 +1,4 @@
 module SimpleMapper
-  class Attribute
-    Options = [
-      :default,
-      :key,
-      :type,
-    ]
-    attr_accessor :key, :name, :type, :default
-
-    def initialize(name, options = {})
-      self.key = self.name = name
-      process_options(options)
-    end
-
-    def process_options(options = {})
-      Options.each do |option|
-        self.send(:"#{option.to_s}=", options[option]) if options[option]
-      end
-    end
-
-    def encode(value)
-      return value unless type
-      converter = type.respond_to?(:encode) ? type : SimpleMapper::Attributes.type_for(type)[:converter]
-      converter.encode(value)
-    end
-  end
-
   module Attributes
     self.instance_eval do
       def types

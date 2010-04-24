@@ -3,4 +3,6 @@ module SimpleMapper
   end
   class TypeConversionException < Exception
   end
+  class InvalidTypeException < Exception
+  end
 end
