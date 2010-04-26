@@ -1,6 +1,14 @@
 require 'test_helper'
 
 class AttributesTest < Test::Unit::TestCase
+  def stub_out_attributes(klass, *attrs)
+    attrs.each do |attr|
+      attr_obj = klass.simple_mapper.attributes[attr]
+      attr_obj.stubs(:changed?)
+      attr_obj.stubs(:changed!)
+    end
+  end
+
   context 'A SimpleMapper::Attributes::Manager' do
     setup do
       @instance = SimpleMapper::Attributes::Manager.new
@@ -167,16 +175,19 @@ class AttributesTest < Test::Unit::TestCase
     context 'to_simple instance method' do
       setup do
         @class.maps :no_type
+        stub_out_attributes @class, :no_type
       end
 
       should 'return a hash with key/value per known attribute' do
         @class.maps :other
+        stub_out_attributes @class, :other
         @instance = @class.new( :no_type => 'no type', :other => 'Other!' )
         assert_equal( {:no_type => 'no type', :other => 'Other!'}, @instance.to_simple )
       end
 
       should 'return hash whose key/value pairs follow attribute state' do
         @class.maps :other
+        stub_out_attributes @class, :other
         @instance = @class.new( :no_type => 'original', :other => 'original' )
         @instance.other = 'updated'
         assert_equal({:no_type => 'original', :other => 'updated'}, @instance.to_simple)
@@ -184,6 +195,7 @@ class AttributesTest < Test::Unit::TestCase
 
       should 'map attributes to specified keys in returned hash' do
         @class.maps :other, :key => :alt_key
+        stub_out_attributes @class, :other
         @instance = @class.new
         @instance.no_type = 'no type'
         @instance.other = 'alt key'
@@ -192,6 +204,7 @@ class AttributesTest < Test::Unit::TestCase
 
       should 'return a hash with strings for keys when :string_keys option is true' do
         @class.maps :other, :key => :alt_key
+        stub_out_attributes @class, :other
         @instance = @class.new
         @instance.no_type = 'no type'
         @instance.other = 'alt key'
@@ -210,6 +223,7 @@ class AttributesTest < Test::Unit::TestCase
           end
         end
         @class.maps :typed, :type => @type
+        stub_out_attributes @class, :typed
         @instance = @class.new( :typed => 'typed!' )
         assert_equal 'encoded: typed!', @instance.to_simple[:typed]
       end
@@ -224,6 +238,7 @@ class AttributesTest < Test::Unit::TestCase
           :converter     => @type,
         })
         @class.maps :typed, :type => :type
+        stub_out_attributes @class, :typed
         @instance = @class.new( :typed => 'typed!' )
         assert_equal 'encoded!', @instance.to_simple[:typed]
       end
@@ -231,6 +246,7 @@ class AttributesTest < Test::Unit::TestCase
       context 'with :defined argument' do
         should 'return a hash with key/value per defined attribute' do
           @class.maps :undefined
+          stub_out_attributes @class, :undefined
           assert_equal({:no_type => 'nt'}, @class.new({:no_type => 'nt'}).to_simple(:defined => true))
         end
 
@@ -242,6 +258,7 @@ class AttributesTest < Test::Unit::TestCase
       context 'with :changes argument' do
         setup do
           @class.maps :other
+          stub_out_attributes @class, :other
           @instance = @class.new({:typed => 'typed', :other => 'other'})
         end
 
@@ -251,6 +268,7 @@ class AttributesTest < Test::Unit::TestCase
 
         should 'return a hash of only the key/value pairs that were changed' do
           @instance.other = 'udder'
+          @instance.class.simple_mapper.attributes[:other].stubs(:changed?).with(@instance).returns(true)
           assert_equal({:other => 'udder'}, @instance.to_simple(:changed => true))
         end
       end
@@ -280,6 +298,7 @@ class AttributesTest < Test::Unit::TestCase
       setup do
         @instance = @class.new
         @class.maps :foo
+        stub_out_attributes @class, :foo
       end
       context 'reset_attribute should' do
         should 'restore the specified attribute to its source value' do
@@ -393,6 +412,7 @@ class AttributesTest < Test::Unit::TestCase
 
         should 'return the source attribute via string key if symbol key does not exist' do
           @class.maps :some_attr
+          stub_out_attributes @class, :some_attr
           @instance = @class.new('foo' => 'Foo!', :some_attr => 'Some Attr')
           assert_equal 'Foo!', @instance.read_attribute(:foo)
           assert_equal 'Some Attr', @instance.read_attribute(:some_attr)
@@ -400,18 +420,20 @@ class AttributesTest < Test::Unit::TestCase
       end
       context 'write_attribute should' do
         should 'set the attribute as an instance variable' do
-          @instance.write_attribute(:foo_attr, 'Foo!')
-          assert_equal 'Foo!', @instance.instance_variable_get(:@foo_attr)
+          @instance.write_attribute(:foo, 'Foo!')
+          assert_equal 'Foo!', @instance.instance_variable_get(:@foo)
         end
       end
       context 'get_attribute_default' do
         should 'return nil if the attribute has no default specified' do
           @class.maps :without_default
+          stub_out_attributes @class, :without_default
           assert_equal nil, @instance.get_attribute_default(:without_default)
         end
 
         should 'invoke specified default symbol on instance if attr has default specified' do
           @class.maps :with_default, :default => :some_default
+          stub_out_attributes @class, :with_default
           @instance.expects(:some_default).once.with.returns('the default value')
           assert_equal 'the default value', @instance.get_attribute_default(:with_default)
         end
@@ -426,6 +448,7 @@ class AttributesTest < Test::Unit::TestCase
 
           should 'invoke :default on type converter if default is :from_type and :type is object' do
             @class.maps :with_default, :type => @type, :default => :from_type
+            stub_out_attributes @class, :with_default
             assert_equal @expected_val, @instance.get_attribute_default(:with_default)
           end
 
@@ -436,6 +459,7 @@ class AttributesTest < Test::Unit::TestCase
                 :expected_class => @type.class,
                 :converter      => @type}})
               @class.maps :with_default, :type => @name, :default => :from_type
+              stub_out_attributes @class, :with_default
               assert_equal @expected_val, @instance.get_attribute_default(:with_default)
             ensure
               SimpleMapper::Attributes.types.delete @type.name
@@ -452,33 +476,47 @@ class AttributesTest < Test::Unit::TestCase
         @instance = @class.new(:change_me => 'change me', :do_not_change_me => 'no changing')
       end
 
-      should 'mark an attribute as unchanged if it has not been assigned' do
+      should 'automatically instantiate an empty changes hash per instance' do
+        assert_equal({}, @instance.simple_mapper_changes)
+        @other = @class.new
+        assert_equal({}, @other.simple_mapper_changes)
+        assert_not_equal @instance.simple_mapper_changes.object_id, @other.simple_mapper_changes.object_id
+      end
+
+      should 'indicate an attribute is unchanged if it has not been assigned, based on attribute object' do
+        @instance.class.simple_mapper.attributes[:change_me].expects(:changed?).with(@instance).returns(false)
         assert_equal false, @instance.attribute_changed?(:change_me)
       end
 
       should 'mark an attribute as changed once it has been assigned to' do
+        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance)
         @instance.change_me = 'Thou art changed'
-        assert_equal true, @instance.attribute_changed?(:change_me)
       end
 
       should 'mark an attribute as changed via the :attribute_changed! method' do
-        assert_equal false, @instance.attribute_changed?(:change_me)
+        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance)
         @instance.attribute_changed! :change_me
-        assert_equal true, @instance.attribute_changed?(:change_me)
       end
 
       should 'return empty list for :changed_attributes when nothing has been assigned' do
+        @instance.class.simple_mapper.attributes.each do |key, attr|
+          attr.expects(:changed?).with(@instance).returns(false)
+        end
         assert_equal [], @instance.changed_attributes
       end
 
-      should 'return single-item list for :changed_attributes when one attribute was assigned' do
-        @instance.change_me = 'foo'
+      should 'return single-item list for :changed_attributes when an attribute is marked as changed' do
+        @instance.class.simple_mapper.attributes.each do |key, attr|
+          attr.expects(:changed?).with(@instance).returns(key == :change_me ? true : false)
+        end
         assert_equal [:change_me], @instance.changed_attributes
       end
 
       should 'return two-item list for :changed_attributes when both attrs were assigned' do
-        @instance.change_me = 'changed!'
-        @instance.do_not_change_me = 'I defy you'
+        changes = [:change_me, :do_not_change_me]
+        @instance.class.simple_mapper.attributes.each do |key, attr|
+          attr.expects(:changed?).with(@instance).returns(changes.include?(key) ? true : false)
+        end
         assert_equal([:change_me, :do_not_change_me], @instance.changed_attributes.sort_by {|sym| sym.to_s})
       end
     end

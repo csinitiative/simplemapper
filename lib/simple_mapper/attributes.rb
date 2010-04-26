@@ -99,16 +99,23 @@ module SimpleMapper
       end
     end
 
+    def simple_mapper_changes
+      @simple_mapper_changes ||= {}
+    end
+
     def attribute_changed!(attr)
-      @simple_mapper_changes[attr] = true
+      attribute_object_for(attr).changed!(self)
     end
 
     def attribute_changed?(attr)
-      @simple_mapper_changes.has_key? attr
+      attribute_object_for(attr).changed?(self)
     end
 
     def changed_attributes
-      @simple_mapper_changes.keys
+      self.class.simple_mapper.attributes.inject([]) do |list, keyval|
+        list << keyval[0] if keyval[1].changed?(self)
+        list
+      end
     end
 
     def initialize(values = {})

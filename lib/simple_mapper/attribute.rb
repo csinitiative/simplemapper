@@ -38,6 +38,14 @@ module SimpleMapper
       value = encode(self.value(object))
       container[key] = value unless value.nil? and options[:defined]
     end
+
+    def changed!(object)
+      object.simple_mapper_changes[name] = true
+    end
+
+    def changed?(object)
+      (object.simple_mapper_changes[name] && true) || false
+    end
   end
 
 end

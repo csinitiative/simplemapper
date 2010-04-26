@@ -37,6 +37,24 @@ class AttributeTest < Test::Unit::TestCase
       assert_equal :foo, @instance.value(target)
     end
 
+    context 'change tracking' do
+      setup do
+        @changes = {}
+        @object = stub('object', :simple_mapper_changes => @changes)
+      end
+
+      should 'mark the attribute as changed within an instance.simple_mapper_changes hash when instance given to :changed!' do
+        @instance.changed!(@object)
+        assert_equal({@name => true}, @changes)
+      end
+
+      should 'return truth of changed state for attribute on instance provided to :changed? based on instance.simple_mapper_changes' do
+        assert_equal false, @instance.changed?(@object)
+        @changes[@name] = true
+        assert_equal true, @instance.changed?(@object)
+      end
+    end
+
     context 'when encoding' do
       should 'pass through the value when type is undefined' do
         assert_equal :foo, @instance.encode(:foo)
