@@ -84,4 +84,75 @@ class AttributeTest < Test::Unit::TestCase
       assert_equal :some_default, instance.default
     end
   end
+
+  context 'the SimpleMapper::Attribute :to_simple method' do
+    setup do
+      @name      = :some_attribute
+      @key       = :some_attribute_key
+      @class     = SimpleMapper::Attribute
+      @instance  = @class.new(@name, :key => @key)
+      @value     = :some_attribute_value
+
+      # the container is provided in each :to_simple call; it's where the
+      # simplified representation of the attribute/value should go.
+      # We want it to start as non-empty so the test can verify that the
+      # to_simple operation is additive rather than destructive
+      @container = {:preserve_me => :or_else}
+
+      @object    = stub('object')
+      @object.stubs(@name).returns(@value)
+    end
+
+    context 'for an untyped attribute' do
+      should 'assign the attribute value as key/pair to the provided container' do
+        result = @container.clone
+        result[@key] = @value
+        @instance.to_simple @object, @container
+        assert_equal result, @container
+      end
+
+      should 'not assign key/value if :defined is true and value is nil' do
+        @object.stubs(@name).returns(nil)
+        result = @container.clone
+        @instance.to_simple @object, @container, :defined => true
+        assert_equal result, @container
+      end
+
+      should 'assign attr value as key/val pair if :defined is true and value is !nil' do
+        result = @container.clone
+        result[@key] = @value
+        @instance.to_simple @object, @container, :defined => true
+        assert_equal result, @container
+      end
+    end
+
+    context 'for a typed attribute' do
+      setup do
+        @type = stub('type')
+        @type.stubs(:encode).with(@value).returns(@encoded_value = :some_encoded_value)
+        @instance.stubs(:type).returns(@type)
+      end
+
+      should 'assign the encoded attribute value as key/pair to the provided container' do
+        result = @container.clone
+        result[@key] = @encoded_value
+        @instance.to_simple @object, @container
+        assert_equal result, @container
+      end
+
+      should 'not assign key/value if :defined is true and encoded value is nil' do
+        @type.stubs(:encode).with(@value).returns(nil)
+        result = @container.clone
+        @instance.to_simple @object, @container, :defined => true
+        assert_equal result, @container
+      end
+
+      should 'assign encoded attr value as key/val pair if :defined is true and value is !nil' do
+        result = @container.clone
+        result[@key] = @encoded_value
+        @instance.to_simple @object, @container, :defined => true
+        assert_equal result, @container
+      end
+    end
+  end
 end

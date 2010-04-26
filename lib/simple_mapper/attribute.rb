@@ -33,6 +33,11 @@ module SimpleMapper
       return value unless c = converter
       c.encode(value)
     end
+
+    def to_simple(object, container, options = {})
+      value = encode(self.value(object))
+      container[key] = value unless value.nil? and options[:defined]
+    end
   end
 
 end
