@@ -172,6 +172,48 @@ class AttributesTest < Test::Unit::TestCase
       assert_equal({}, @class.new.to_simple)
     end
 
+    context 'to_simple instance method' do
+      setup do
+        @class.maps :a
+        @class.maps :b
+        @attrib_a = @class.simple_mapper.attributes[:a]
+        @attrib_b = @class.simple_mapper.attributes[:b]
+        # traditional mocking is not sufficiently
+        # expressive for this, so we'll just implement
+        # methods directly.
+        @options = {}
+        [@attrib_a, @attrib_b].each do |attr|
+          attr.instance_eval do
+            def to_simple(obj, container, options = {})
+              # like an expectation; verifies that
+              # options are passed along properly
+              raise Exception unless options == obj.expected_options
+              container[key] = obj.read_attribute(name)
+              container
+            end
+          end
+        end
+        @values = {:a => 'A', :b => 'B'}
+        @instance = @class.new(@values.clone)
+        @instance.stubs(:expected_options).returns(@options)
+      end
+
+      should 'accumulate results from :to_simple on each attribute object' do
+        @attrib_a.expects(:changed?).never
+        @attrib_b.expects(:changed?).never
+        assert_equal @values, @instance.to_simple(@options)
+      end
+
+      should 'accumulate results from :to_simple on changed attributes only when :changed => true is passed' do
+        expectation = @values.clone
+        expectation.delete :b
+        @attrib_a.expects(:changed?).with(@instance).returns(true)
+        @attrib_b.expects(:changed?).with(@instance).returns(false)
+        @options[:changed] = true
+        assert_equal expectation, @instance.to_simple(@options)
+      end
+    end
+
     context 'instance method' do
       setup do
         @instance = @class.new
@@ -445,6 +487,13 @@ class AttributesTest < Test::Unit::TestCase
         assert @class.simple_mapper.attributes[:outer].type.respond_to?(:maps)
         assert @class.simple_mapper.attributes[:outer].type.respond_to?(:new)
         assert @class.simple_mapper.attributes[:outer].type.respond_to?(:decode)
+      end
+
+      should 'assign anonymous mapper as the mapper of the attribute object when given a block' do
+        mapper = stub('mapper')
+        @class.simple_mapper.expects(:create_anonymous_mapper).returns(mapper)
+        @class.maps :outer do; end
+        assert_equal mapper, @class.simple_mapper.attributes[:outer].mapper
       end
     end
   end

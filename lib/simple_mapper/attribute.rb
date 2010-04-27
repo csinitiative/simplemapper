@@ -4,8 +4,17 @@ module SimpleMapper
       :default,
       :key,
       :type,
+      :mapper,
     ]
-    attr_accessor :key, :name, :type, :default
+    attr_accessor :key, :name, :default, :mapper
+
+    def type=(new_type)
+      @type = new_type
+    end
+
+    def type
+      @type || mapper
+    end
 
     def initialize(name, options = {})
       self.key = self.name = name
@@ -35,8 +44,9 @@ module SimpleMapper
     end
 
     def to_simple(object, container, options = {})
-      value = encode(self.value(object))
-      container[key] = value unless value.nil? and options[:defined]
+      raw_value = self.value(object)
+      value = mapper ? raw_value.to_simple(options) : encode(raw_value)
+      container[options[:string_keys] ? key.to_s : key] = value unless value.nil? and options[:defined]
     end
 
     def changed!(object)

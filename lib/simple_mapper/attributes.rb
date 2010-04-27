@@ -27,7 +27,9 @@ module SimpleMapper
         if block_given?
           hash = args.last
           args << (hash = {}) unless hash.instance_of? Hash
-          hash[:type] = simple_mapper.create_anonymous_mapper(&block)
+          mapper = simple_mapper.create_anonymous_mapper(&block)
+          hash[:type] ||= mapper
+          hash[:mapper] = mapper
         end
         attribute = simple_mapper.create_attribute(attr, *args)
         simple_mapper.install_attribute attr, attribute
@@ -125,25 +127,10 @@ module SimpleMapper
     end
 
     def to_simple(options = {})
-      all = ! options[:defined]
-      if options[:changed]
-        changes = changed_attributes
-        attribs = changes.size > 0 ? self.class.simple_mapper.attributes.values_at(*changes) : []
-      else
-        attribs = self.class.simple_mapper.attributes.values
-      end
-      identifier = options[:string_keys] ? Proc.new {|item| item.key.to_s} : Proc.new {|item| item.key}
-      attribs.inject({}) do |accum, attrib|
-        val = read_attribute(attrib.name)
-        if val.respond_to?(:to_simple)
-          val = val.to_simple(options.clone)
-        elsif attrib.type
-          val = attrib.encode(val)
-        end
-        if all or ! val.nil?
-          accum[identifier.call(attrib)] = val
-        end
-        accum
+      changes = (options[:changed] && true) || false
+      self.class.simple_mapper.attributes.values.inject({}) do |container, attrib|
+        attrib.to_simple(self, container, options) if !changes or attrib.changed?(self)
+        container
       end
     end
 

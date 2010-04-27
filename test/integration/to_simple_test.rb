@@ -104,11 +104,12 @@ class ToSimpleTest < Test::Unit::TestCase
       end
     end
 
-    context 'with an attribute value that supports to_simple' do
+    context 'with an attribute value that uses a mapper' do
       setup do
-        @class.maps :other
+        @class.maps :other do; end
         @instance = @class.new({:no_type => 'no type',
-                                :other => (@mock = stub('to_simple_supporter'))})
+                                :other => {}})
+        @mock = @instance.other
       end
 
       should 'invoke to_simple on attribute value rather than encode' do

@@ -31,6 +31,12 @@ class AttributeTest < Test::Unit::TestCase
       assert_equal :some_default, @instance.default
     end
 
+    should 'have a mapper attribute' do
+      assert_equal nil, @instance.mapper
+      assert_equal :some_mapper, @instance.mapper = :some_mapper
+      assert_equal :some_mapper, @instance.mapper
+    end
+
     should 'get value from instance argument' do
       target = mock('target')
       target.stubs(@name).with.returns(:foo)
@@ -101,6 +107,11 @@ class AttributeTest < Test::Unit::TestCase
       instance = @class.new(:name, :default => :some_default)
       assert_equal :some_default, instance.default
     end
+
+    should 'allow specification of mapper in constructor' do
+      instance = @class.new(:name, :mapper => :some_mapper)
+      assert_equal :some_mapper, instance.mapper
+    end
   end
 
   context 'the SimpleMapper::Attribute :to_simple method' do
@@ -109,7 +120,7 @@ class AttributeTest < Test::Unit::TestCase
       @key       = :some_attribute_key
       @class     = SimpleMapper::Attribute
       @instance  = @class.new(@name, :key => @key)
-      @value     = :some_attribute_value
+      @value     = 'some_attribute_value'
 
       # the container is provided in each :to_simple call; it's where the
       # simplified representation of the attribute/value should go.
@@ -142,13 +153,35 @@ class AttributeTest < Test::Unit::TestCase
         @instance.to_simple @object, @container, :defined => true
         assert_equal result, @container
       end
+
+      should 'use string keys instead of symbols if :string_keys option is true' do
+        result = @container.clone
+        result[@key.to_s] = @value
+        @instance.to_simple @object, @container, :string_keys => true
+        assert_equal result, @container
+      end
+
+      should 'invoke to_simple on value rather than encoding if mapper is set' do
+        @instance.mapper = mapper = mock('mapper')
+        options = {:some_useless_option => :me}
+        @value.expects(:to_simple).with(options).returns(:something_simple)
+        result = @container.clone
+        result[@key] = :something_simple
+        @instance.to_simple @object, @container, options
+        assert_equal result, @container
+      end
+
+      should 'use the mapper as type if a mapper is set' do
+        @instance.mapper = mapper = mock('mapper')
+        assert_equal mapper, @instance.type
+      end
     end
 
     context 'for a typed attribute' do
       setup do
         @type = stub('type')
         @type.stubs(:encode).with(@value).returns(@encoded_value = :some_encoded_value)
-        @instance.stubs(:type).returns(@type)
+        @instance.type = @type
       end
 
       should 'assign the encoded attribute value as key/pair to the provided container' do
@@ -170,6 +203,18 @@ class AttributeTest < Test::Unit::TestCase
         result[@key] = @encoded_value
         @instance.to_simple @object, @container, :defined => true
         assert_equal result, @container
+      end
+
+      should 'use string keys instead of symbols if :string_keys option is true' do
+        result = @container.clone
+        result[@key.to_s] = @encoded_value
+        @instance.to_simple @object, @container, :string_keys => true
+        assert_equal result, @container
+      end
+
+      should 'use specified type when set rather than using the mapper' do
+        @instance.mapper = mapper = mock('mapper')
+        assert_equal @type, @instance.type
       end
     end
   end
