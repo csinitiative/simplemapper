@@ -5,4 +5,6 @@ module SimpleMapper
   end
   class InvalidTypeException < Exception
   end
+  class InvalidPatternException < Exception
+  end
 end

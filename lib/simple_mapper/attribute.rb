@@ -57,7 +57,7 @@ module SimpleMapper
 
     def converter
       return nil unless type
-      converter = type.respond_to?(:encode) ? type : (t = SimpleMapper::Attributes.type_for(type) and t[:converter])
+      converter = type.respond_to?(:encode) || type.respond_to?(:decode) ? type : (t = SimpleMapper::Attributes.type_for(type) and t[:converter])
       raise SimpleMapper::InvalidTypeException unless converter
       converter
     end
