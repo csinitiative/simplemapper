@@ -86,6 +86,49 @@ class AttributeTest < Test::Unit::TestCase
         assert_raise(SimpleMapper::InvalidTypeException) { @instance.encode(:foo) }
       end
     end
+
+    context 'using its default_value method' do
+      setup do
+        @default_name = :default_method
+        @default_value = 'some default'
+        @object = stub('object', @default_name => @default_value)
+      end
+
+      should 'return nil if there is no default' do
+        assert_equal nil, @instance.default_value(@object)
+      end
+
+      should 'return the default value if there is one by invoking the default on the target object' do
+        @instance.default = @default_name
+        assert_equal @default_value, @instance.default_value(@object)
+      end
+
+      context 'with a default of :from_type' do
+        setup do
+          @expected_value = 'the default value'
+          @type = stub('type', :name => :some_type, :encode => :blah, :decode => :blah)
+          @type.expects(:default).once.with.returns(@expected_value)
+          @instance.default = :from_type
+        end
+
+        should 'invoke :default on type if it is able' do
+          @instance.type = @type
+          result = @instance.default_value(@object)
+          assert_equal @expected_value, result
+        end
+
+        should 'invoke :default on registered type if type is registered' do
+          @instance.type = @type.name
+          SimpleMapper::Attributes.stubs(:types).with.returns({@type.name => {
+            :name           => @type.name,
+            :expected_class => @type.class,
+            :converter      => @type,
+          }})
+          result = @instance.default_value(@object)
+          assert_equal @expected_value, result
+        end
+      end
+    end
   end
 
   context 'the SimpleMapper::Attribute constructor' do
@@ -215,6 +258,101 @@ class AttributeTest < Test::Unit::TestCase
       should 'use specified type when set rather than using the mapper' do
         @instance.mapper = mapper = mock('mapper')
         assert_equal @type, @instance.type
+      end
+    end
+  end
+
+  context 'A SimpleMapper::Attribute working with a SimpleMapper::Attributes-based object' do
+    setup do
+      @class = SimpleMapper::Attribute
+      @key      = :some_key
+      @value    = :some_value
+      @name     = :some_attribute
+      @instance = @class.new(@name, :key => @key)
+
+      @source = {}
+      @object.stubs(:simple_mapper_source).with.returns(@source)
+    end
+
+    context 'using the :source_value method' do
+      should 'return object source value by key symbol' do
+        @source[@key] = @value
+        assert_equal @value, @instance.source_value(@object)
+      end
+
+      should 'return object source value by key string if symbol does not exist' do
+        @source[@key.to_s] = @value
+        assert_equal @value, @instance.source_value(@object)
+      end
+    end
+
+    context 'using the :transformed_source_value method' do
+      should 'return the source value directly' do
+        @instance.expects(:source_value).with(@object).returns(@value)
+        assert_equal @value, @instance.transformed_source_value(@object)
+      end
+
+      should 'return the default value if the source value is undefined' do
+        @instance.stubs(:source_value).with(@object).returns(nil)
+        @instance.expects(:default_value).with(@object).returns(:my_default)
+        result = @instance.transformed_source_value(@object)
+        #assert_equal :my_default, result
+      end
+
+      context 'with a typed attribute' do
+        setup do
+          @type = stub('type', :name => :sooper_speshil_tipe)
+          @registry = {:name => @type.name, :converter => @type}
+          SimpleMapper::Attributes.stubs(:type_for).with(@type.name).returns(@registry)
+        end
+
+        context 'and a type that supports :decode' do
+          setup do
+            @instance.type = @type
+            @type.expects(:decode).with(@value).returns( @encoded = :encoded )
+          end
+
+          should 'return the decoded source value' do
+            @instance.stubs(:source_value).with(@object).returns(@value)
+            @instance.expects(:default_value).with(@object).never
+            assert_equal @encoded, @instance.transformed_source_value(@object)
+          end
+
+          should 'return the decoded default value if no source defined' do
+            @instance.stubs(:source_value).with(@object).returns(nil)
+            @instance.stubs(:default_value).with(@object).returns(@value)
+            result = @instance.transformed_source_value(@object)
+            # assert_equal @encoded, result
+          end
+        end
+
+        context 'and an expected type' do
+          setup do
+            @instance.type = @type.name
+            @registry[:expected_type] = @value.class
+            @type.expects(:decode).never
+          end
+
+          should 'return the source value if it matches' do
+            @instance.stubs(:source_value).with(@object).returns(@value)
+            assert_equal @value, @instance.transformed_source_value(@object)
+          end
+
+          should 'return the default value if no source defined and default matches' do
+            @instance.stubs(:source_value).with(@object).returns(nil)
+            @instance.expects(:default_value).with(@object).returns(@value)
+            result = @instance.transformed_source_value(@object)
+            # assert_equal @value, result
+          end
+        end
+
+        should 'return the decoded source value via the registered type' do
+          @instance.type = @type.name
+          @instance.stubs(:source_value).with(@object).returns(@value)
+          @type.expects(:decode).with(@value).returns( encoded = :encoded )
+          result = @instance.transformed_source_value(@object)
+          assert_equal encoded, result
+        end
       end
     end
   end

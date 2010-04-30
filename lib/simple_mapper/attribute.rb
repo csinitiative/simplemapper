@@ -27,6 +27,30 @@ module SimpleMapper
       end
     end
 
+    def source_value(object)
+      source = object.simple_mapper_source
+      source.has_key?(key) ? source[key] : source[key.to_s]
+    end
+
+    def transformed_source_value(object)
+      val = source_value(object)
+      val = default_value(object) if val.nil?
+      if type = self.type
+        if type.respond_to?(:decode)
+          type.decode(val)
+        else
+          type = SimpleMapper::Attributes.type_for(type)
+          if expected = type[:expected_type] and val.instance_of? expected
+            val
+          else
+            type[:converter].decode(val)
+          end
+        end
+      else
+        val
+      end
+    end
+
     def value(object)
       object.send(name)
     end
@@ -55,6 +79,17 @@ module SimpleMapper
 
     def changed?(object)
       (object.simple_mapper_changes[name] && true) || false
+    end
+
+    def default_value(object)
+      case d = self.default
+        when :from_type
+          converter.default
+        when Symbol
+          object.send(d)
+        else
+          nil
+      end
     end
   end
 

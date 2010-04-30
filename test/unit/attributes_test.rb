@@ -214,177 +214,77 @@ class AttributesTest < Test::Unit::TestCase
       end
     end
 
+    context 'simpler_mapper_source' do
+      should 'provide an empty hash by default' do
+        @instance = @class.new
+        assert_equal({}, @instance.simple_mapper_source)
+      end
+
+      should 'provide the source hash with which the instance was created' do
+        values = {:foo => 'foo', :boo => 'boo'}
+        @instance = @class.new(values)
+        assert_equal values, @instance.simple_mapper_source
+      end
+    end
+
     context 'instance method' do
       setup do
         @instance = @class.new
         @class.maps :foo
         stub_out_attributes @class, :foo
       end
+
       context 'reset_attribute should' do
         should 'restore the specified attribute to its source value' do
-          @instance = @class.new(:foo => 'Foo!')
+          @instance = @class.new
+          @class.simple_mapper.attributes[:foo].expects(:source_value).with(@instance).once.returns('Foo!')
+
           @instance.write_attribute(:foo, 'new val')
           assert_equal 'new val', @instance.read_attribute(:foo)
           @instance.reset_attribute(:foo)
           assert_equal 'Foo!', @instance.read_attribute(:foo)
         end
       end
-      context 'read_attribute' do
+
+      # keep me
+      context 'transform_source_attribute' do
         setup do
-          @instance = @class.new(:foo => 'Foo!', :some_attr => 'Some Attr')
+          @instance = @class.new(:foo => 'foo')
         end
 
-        should 'return the source attribute by default' do
-          assert_equal 'Foo!', @instance.read_attribute(:foo)
-        end
-
-        should 'return the updated attribute if one exists' do
-          @instance.write_attribute(:foo, 'Blah!')
-          assert_equal 'Blah!', @instance.read_attribute(:foo)
-        end
-
-        should 'return the attribute default if source attribute is nil' do
-          @instance = @class.new
-          @instance.expects(:get_attribute_default).with(:foo).returns('foo default')
-          assert_equal 'foo default', @instance.read_attribute(:foo)
-        end
-
-        context 'with a type converter' do
-          setup do
-            @expected_out = '_foo_'
-            @expected_in = 'Foo!'
-            @type_a = mock('type_a')
-            @type_a.expects(:decode).with(@expected_in).returns(@expected_out)
-            @class.simple_mapper.attributes[:foo].type = @type_a
-          end
-
-          should 'transform the source attribute if a type converter was specified' do
-            assert_equal @expected_out, @instance.read_attribute(:foo)
-          end
-
-          should 'transform the default value if a type converter was specified' do
-            @instance = @class.new
-            @instance.stubs(:get_attribute_default).with(:foo).returns(@expected_in)
-            assert_equal @expected_out, @instance.read_attribute(:foo)
-          end
-        end
-
-        context 'with a type name' do
-          setup do
-            foo_type = mock('foo_type')
-            foo_class = foo_type.class
-            @expected_in = 'Foo!'
-            @expected_out = 'Foo on Ewe!'
-            foo_type.expects(:decode).once.with(@expected_in).returns(@expected_out)
-            SimpleMapper::Attributes.stubs(:types).with.returns({:foo_type => {
-              :name          => :foo_type,
-              :expected_type => foo_class,
-              :converter     => foo_type,
-            }})
-            @class.simple_mapper.attributes[:foo].type = :foo_type
-          end
-
-          should 'transform the source attribute if a type name was specified' do
-            assert_equal @expected_out, @instance.read_attribute(:foo)
-          end
-
-          should 'transform the default value if the source is nil' do
-            @instance = @class.new
-            @instance.stubs(:get_attribute_default).with(:foo).returns(@expected_in)
-            assert_equal @expected_out, @instance.read_attribute(:foo)
-          end
-        end
-
-        should 'not transform the source attr if it is already of the expected type' do
-          foo_type = mock('foo too type')
-          foo_type.expects(:decode).never
-          SimpleMapper::Attributes.expects(:type_for).with(:foo_type).returns({
-            :name          => :foo_type,
-            :expected_type => String,
-            :converter     => foo_type,
-          })
-          @class.simple_mapper.attributes[:foo].type = :foo_type
-          assert_equal 'Foo!', @instance.read_attribute(:foo)
-        end
-
-        should 'not transform a written attribute when type was specified' do
-          type_a = mock('type_a')
-          type_a.expects(:decode).never
-          @class.simple_mapper.attributes[:foo].type = type_a
-          @instance.write_attribute(:foo, 'blahblah')
-          assert_equal 'blahblah', @instance.read_attribute(:foo)
+        should 'delegate source value transformation to underlying attribute object' do
+          @class.simple_mapper.attributes[:foo].expects(:transformed_source_value).with(@instance).returns(:foopy)
+          result = @instance.transform_source_attribute(:foo)
+          assert_equal :foopy, result
         end
       end
+
+      # keep me
       context 'read_source_attribute' do
         setup do
           @instance = @class.new(:foo => 'Foo!')
         end
 
-        should 'return the attribute specified from the source hash' do
-          assert_equal 'Foo!', @instance.read_source_attribute(:foo)
-        end
-
-        should 'return the attribute from source even if updated locally' do
-          @instance.write_attribute(:foo, 'Blah!')
-          assert_equal 'Blah!', @instance.read_attribute(:foo)
-          assert_equal 'Foo!', @instance.read_source_attribute(:foo)
-        end
-
-        should 'return the source attribute via string key if symbol key does not exist' do
-          @class.maps :some_attr
-          stub_out_attributes @class, :some_attr
-          @instance = @class.new('foo' => 'Foo!', :some_attr => 'Some Attr')
-          assert_equal 'Foo!', @instance.read_attribute(:foo)
-          assert_equal 'Some Attr', @instance.read_attribute(:some_attr)
+        should 'delegate source value retrieval to the underlying attribute object' do
+          @class.simple_mapper.attributes[:foo].expects(:source_value).with(@instance).returns('foo')
+          result = @instance.read_source_attribute(:foo)
+          assert_equal 'foo', result
         end
       end
+
       context 'write_attribute should' do
         should 'set the attribute as an instance variable' do
           @instance.write_attribute(:foo, 'Foo!')
           assert_equal 'Foo!', @instance.instance_variable_get(:@foo)
         end
       end
+
       context 'get_attribute_default' do
-        should 'return nil if the attribute has no default specified' do
-          @class.maps :without_default
-          stub_out_attributes @class, :without_default
-          assert_equal nil, @instance.get_attribute_default(:without_default)
-        end
-
-        should 'invoke specified default symbol on instance if attr has default specified' do
-          @class.maps :with_default, :default => :some_default
-          stub_out_attributes @class, :with_default
-          @instance.expects(:some_default).once.with.returns('the default value')
-          assert_equal 'the default value', @instance.get_attribute_default(:with_default)
-        end
-
-        context 'with :default of :from_type' do
-          setup do
-            @expected_val = 'some default value'
-            @name = :with_default
-            @type = stub('type', :encode => nil, :decode => nil, :name => @name)
-            @type.expects(:default).once.with.returns(@expected_val)
-          end
-
-          should 'invoke :default on type converter if default is :from_type and :type is object' do
-            @class.maps :with_default, :type => @type, :default => :from_type
-            stub_out_attributes @class, :with_default
-            assert_equal @expected_val, @instance.get_attribute_default(:with_default)
-          end
-
-          should 'invoke :default on registered type if default is :from_type and :type is registered' do
-            begin
-              SimpleMapper::Attributes.stubs(:types).with.returns({@name => {
-                :name           => @name,
-                :expected_class => @type.class,
-                :converter      => @type}})
-              @class.maps :with_default, :type => @name, :default => :from_type
-              stub_out_attributes @class, :with_default
-              assert_equal @expected_val, @instance.get_attribute_default(:with_default)
-            ensure
-              SimpleMapper::Attributes.types.delete @type.name
-            end
-          end
+        should 'delegate default value to attribute object' do
+          @class.maps :with_default, :default => :foo
+          @class.simple_mapper.attributes[:with_default].expects(:default_value).once.with(@instance).returns(:expected_default)
+          result = @instance.get_attribute_default(:with_default)
+          assert_equal :expected_default, result
         end
       end
     end

@@ -57,24 +57,11 @@ module SimpleMapper
     end
 
     def transform_source_attribute(attr)
-      val = read_source_attribute(attr)
-      val = get_attribute_default(attr) if val.nil?
-      if type = self.class.simple_mapper.attributes[attr].type
-        return type.decode(val) if type.respond_to?(:decode)
-        registration = SimpleMapper::Attributes.type_for(type)
-        if expected = registration[:expected_type] and val.instance_of? expected
-          val
-        else
-          registration[:converter].decode(val)
-        end
-      else
-        val
-      end
+      attribute_object_for(attr).transformed_source_value(self)
     end
 
     def read_source_attribute(attr)
-      key = key_for(attr)
-      @simple_mapper_source.has_key?(key) ? @simple_mapper_source[key] : @simple_mapper_source[key.to_s]
+      attribute_object_for(attr).source_value(self)
     end
 
     def read_attribute(attr)
@@ -88,17 +75,7 @@ module SimpleMapper
     end
 
     def get_attribute_default(attr)
-      attribute = self.class.simple_mapper.attributes[attr]
-      case default = attribute.default
-        when :from_type
-          type = attribute.type
-          type = SimpleMapper::Attributes.type_for(type)[:converter] unless type.respond_to?(:default)
-          type.default
-        when Symbol
-          self.send(default)
-        else
-          nil
-      end
+      attribute_object_for(attr).default_value(self)
     end
 
     def simple_mapper_changes
@@ -119,6 +96,8 @@ module SimpleMapper
         list
       end
     end
+
+    attr_reader :simple_mapper_source
 
     def initialize(values = {})
       @simple_mapper_source = values
