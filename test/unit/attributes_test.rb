@@ -106,6 +106,16 @@ class AttributesTest < Test::Unit::TestCase
         attrib = @instance.create_attribute(:attrib, :key => :not_attrib)
         assert_equal :not_attrib, attrib.key
       end
+
+      should 'default the attribute class to SimpleMapper::Attribute' do
+        assert_equal SimpleMapper::Attribute, @instance.create_attribute(:some_attr).class
+      end
+
+      should 'allow specification of attribute class via the :attribute_class option' do
+        attr_class = Class.new(SimpleMapper::Attribute)
+        attrib = @instance.create_attribute(:some_attr, :attribute_class => attr_class)
+        assert_equal attr_class, attrib.class
+      end
     end
   end
 

@@ -124,8 +124,9 @@ module SimpleMapper
         @attributes ||= {}
       end
 
-      def create_attribute(*args)
-        SimpleMapper::Attribute.new(*args)
+      def create_attribute(name, options = {})
+        attrib_class = options[:attribute_class] || SimpleMapper::Attribute
+        attrib_class.new(name, options)
       end
 
       def install_attribute(attr, object)
