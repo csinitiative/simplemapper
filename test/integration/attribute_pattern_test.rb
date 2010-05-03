@@ -25,6 +25,17 @@ class AttributePatternIntegrationTest < Test::Unit::TestCase
       should 'map typed pairs to the patterned collection attribute' do
         assert_equal @float, @object.float
       end
+
+      should 'map untyped instance values back to simple structure using to_simple' do
+        result = @object.to_simple || {}
+        assert_equal @simple, result.reject {|k, v| ! /^simple_/.match(k.to_s)}
+      end
+
+      should 'map typed instance values back to simple structure using to_simple' do 
+        result = @object.to_simple || {}
+        assert_equal(@float.inject({}) {|h, pair| h[pair[0]] = pair[1].to_s; h},
+                     result.reject {|k, v| ! /^float_/.match(k.to_s)})
+      end
     end
 
     context 'with a nested mapper' do
@@ -54,6 +65,12 @@ class AttributePatternIntegrationTest < Test::Unit::TestCase
 
       should 'still map simple attributes too' do
         assert_equal @input[:not_nested], @object.not_nested.to_s
+      end
+
+      should 'map nested objects back to nested simple structures with to_simple' do
+        expected = @input.reject {|k, v| ! /^nested_/.match(k.to_s)}
+        result = @object.to_simple || {}
+        assert_equal(expected, result.reject {|k, v| ! /^nested/.match(k.to_s)})
       end
     end
   end

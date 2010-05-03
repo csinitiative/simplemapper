@@ -88,6 +88,51 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
           end
         end
       end
+
+      context 'for to_simple' do
+        context 'with simple values' do
+          setup do
+            @container_extra = {:foo => 'foo', :bar => 'bar'}
+            @container_added = {:a => 'A', :ab => 'AB'}
+          end
+
+          should 'add keys and values to container' do
+            @instance.expects(:value).with(@object).returns(@container_added.clone)
+            result = @instance.to_simple(@object, @container_extra.clone)
+            assert_equal @container_extra.merge(@container_added), result
+          end
+
+          should 'encode typed values' do
+            @instance.type = mock('type')
+            @instance.expects(:value).with(@object).returns(@container_added.clone)
+            expectation = {}
+            @container_added.each do |k, v|
+              expectation[k] = v + ' encoded'
+              @instance.type.expects(:encode).with(v).returns(expectation[k])
+            end
+            result = @instance.to_simple(@object, @container_extra.clone)
+            assert_equal @container_extra.merge(expectation), result
+          end
+        end
+
+        should 'apply to_simple on mapped values' do
+          @instance.mapper = stub('mapper', :encode => 'foo')
+          @instance.type = @instance.mapper
+          base_value = {}
+          expected_value = {}
+          container = {}
+          [:a, :ab, :abc].each do |sym|
+            val = sym.to_s.upcase
+            expect = val + ' simplified'
+            expected_value[sym] = {sym => expect}
+            base_value[sym] = mock(val)
+            base_value[sym].expects(:to_simple).with({}).returns(expected_value[sym].clone)
+          end
+          @instance.expects(:value).with(@object).returns(base_value)
+          result = @instance.to_simple(@object, container) || {}
+          assert_equal expected_value, result
+        end
+      end
     end
 
     context 'when applying type to a source/default value' do

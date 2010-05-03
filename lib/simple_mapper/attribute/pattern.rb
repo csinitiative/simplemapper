@@ -31,4 +31,13 @@ class SimpleMapper::Attribute::Pattern < SimpleMapper::Attribute
       hash
     end
   end
+
+  def to_simple(object, container, options = {})
+    val = value(object)
+    mapper = self.mapper
+    val.inject(container) do |hash, keyvalue|
+      container[keyvalue[0]] = mapper ? keyvalue[1].to_simple(options) : encode(keyvalue[1])
+      container
+    end
+  end
 end
