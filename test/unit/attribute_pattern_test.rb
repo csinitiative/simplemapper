@@ -115,22 +115,40 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
           end
         end
 
-        should 'apply to_simple on mapped values' do
-          @instance.mapper = stub('mapper', :encode => 'foo')
-          @instance.type = @instance.mapper
-          base_value = {}
-          expected_value = {}
-          container = {}
-          [:a, :ab, :abc].each do |sym|
-            val = sym.to_s.upcase
-            expect = val + ' simplified'
-            expected_value[sym] = {sym => expect}
-            base_value[sym] = mock(val)
-            base_value[sym].expects(:to_simple).with({}).returns(expected_value[sym].clone)
+        context 'with mapped values' do
+          setup do
+            @instance.mapper = stub('mapper', :encode => 'foo')
+            @instance.type = @instance.mapper
+            @base_value = {}
+            @expected_value = {}
+            @container = {}
           end
-          @instance.expects(:value).with(@object).returns(base_value)
-          result = @instance.to_simple(@object, container) || {}
-          assert_equal expected_value, result
+
+          should 'apply to_simple on values' do
+            [:a, :ab, :abc].each do |sym|
+              val = sym.to_s.upcase
+              expect = val + ' simplified'
+              @expected_value[sym] = {sym => expect}
+              @base_value[sym] = mock(val)
+              @base_value[sym].expects(:to_simple).with({}).returns(@expected_value[sym].clone)
+            end
+            @instance.expects(:value).with(@object).returns(@base_value)
+            result = @instance.to_simple(@object, @container) || {}
+            assert_equal @expected_value, result
+          end
+
+          should 'apply to_simple on values and use string keys on collection when requested' do
+            [:a, :ab, :abc].each do |sym|
+              val = sym.to_s.upcase
+              expect = val + ' simplified'
+              @expected_value[sym.to_s] = {sym.to_s => expect}
+              @base_value[sym] = mock(val)
+              @base_value[sym].expects(:to_simple).with({:string_keys => true}).returns(@expected_value[sym.to_s].clone)
+            end
+            @instance.expects(:value).with(@object).returns(@base_value)
+            result = @instance.to_simple(@object, @container, :string_keys => true) || {}
+            assert_equal @expected_value, result
+          end
         end
       end
     end
