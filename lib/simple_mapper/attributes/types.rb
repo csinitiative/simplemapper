@@ -185,4 +185,30 @@ module SimpleMapper::Attributes::Types
     end
   end
   SimpleMapper::Attributes.register_type(:integer, ::Integer, Integer)
+
+  module TimestampHighRes
+    SECOND_FRACTION = Rational(1, 24 * 60 * 60)
+    PATTERN = /^([^.]+)\.(\d+)([-+]\d{4})$/
+    OUT_FORMAT = '%Y-%m-%d %H:%M:%S.%N%z'
+    IN_FORMAT  = '%Y-%m-%d %H:%M:%S%z'
+
+    def self.encode(value)
+      value.strftime(OUT_FORMAT)
+    end
+
+    def self.decode(value)
+      if value.kind_of?(DateTime)
+        value
+      else
+        if match = PATTERN.match(value.to_s)
+          stamp, second_fraction, zone = match.captures
+          subseconds = second_fraction.to_i
+          DateTime.strptime(stamp + zone, IN_FORMAT) + ((10 ** (-1 * subseconds.to_s.size)) * subseconds * SECOND_FRACTION)
+        else
+          raise SimpleMapper::TypeConversionException, "cannot transform '#{value}' into hi-res DateTime"
+        end
+      end
+    end
+  end
+  SimpleMapper::Attributes.register_type(:timestamp_high_res, ::DateTime, TimestampHighRes)
 end

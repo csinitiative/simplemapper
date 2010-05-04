@@ -243,4 +243,50 @@ class AttributesTypesTest < Test::Unit::TestCase
                     :converter     => @type}, SimpleMapper::Attributes.type_for(:integer))
     end
   end
+
+  context 'the TimestampHighRes type' do
+    require 'bigdecimal'
+    setup do
+      @type  = SimpleMapper::Attributes::Types::TimestampHighRes
+      @class = DateTime
+      @name  = :timestamp_high_res
+      # put the time in UTC, since this loses time zone info
+      @time  = DateTime.now
+      @format = '%Y-%m-%d %H:%M:%S.%N%z'
+      @time_string = @time.strftime(@format)
+      @offsets = [0, 1, 2, 3, -1, -2, -3]
+    end
+
+    should 'pass along DateTimes when given DateTime to decode' do
+      @offsets.each do |offset|
+        assert_equal @time.new_offset(offset), @type.decode(@time.new_offset(offset))
+      end
+    end
+
+    should 'decode conformant strings into DateTimes' do
+      @offsets.each do |offset|
+        assert_equal @time.new_offset(offset),
+                     @type.decode(@time.new_offset(offset).strftime(@format))
+      end
+    end
+
+    should 'throw type conversion exceptions if strings do not conform' do
+      ['', nil, 'abc', '7145.abc.234'].each do |string|
+        assert_raise(SimpleMapper::TypeConversionException) { @type.decode(string) }
+      end
+    end
+
+    should 'encode DateTime values into conformant strings' do
+      @offsets.each do |offset|
+        assert_equal @time.new_offset(offset).strftime(@format),
+                     @type.encode(@time.new_offset(offset))
+      end
+    end
+
+    should 'be registered as the :timestamp_hi_res type' do
+      assert_equal({:expected_type => DateTime,
+                    :name          => @name,
+                    :converter     => @type}, SimpleMapper::Attributes.type_for(@name))
+    end
+  end
 end
