@@ -150,11 +150,21 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
         @instance.apply_type(@input)
       end
 
-      should 'return new hash of keys mapped to decoded values' do
+      should 'return new collection hash of keys mapped to decoded values' do
         @expected.each do |key, value|
           @type.stubs(:decode).with(@input[key]).returns(value)
         end
-        assert_equal @expected, @instance.apply_type(@input)
+        result = @instance.apply_type(@input)
+        assert_equal @expected, result
+        assert_equal SimpleMapper::Collection::Hash, result.class
+      end
+
+      should 'initialize collection hash with the attribute instance' do
+        @expected.each do |key, value|
+          @type.stubs(:decode).with(@input[key]).returns(value)
+        end
+        result = @instance.apply_type(@input)
+        assert_equal @instance, result.attribute
       end
     end
   end

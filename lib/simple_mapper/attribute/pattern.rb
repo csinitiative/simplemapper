@@ -26,10 +26,16 @@ class SimpleMapper::Attribute::Pattern < SimpleMapper::Attribute
 
   def apply_type(value)
     converter = self.converter
-    value.inject({}) do |hash, keyval|
+    value.inject(new_collection) do |hash, keyval|
       hash[keyval[0]] = converter.decode(keyval[1])
       hash
     end
+  end
+
+  def new_collection
+    h = SimpleMapper::Collection::Hash.new
+    h.attribute = self
+    h
   end
 
   def to_simple(object, container, options = {})
