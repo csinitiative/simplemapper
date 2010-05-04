@@ -201,4 +201,46 @@ class AttributesTypesTest < Test::Unit::TestCase
                     :converter     => @type}, SimpleMapper::Attributes.type_for(:timestamp))
     end
   end
+
+  context 'the Integer type' do
+    setup do
+      @type = SimpleMapper::Attributes::Types::Integer
+      @class = Integer
+      @ints = [0, 54, 32, 65535, -12, -65535]
+    end
+
+    should 'convert a numeric string into something integer-like' do
+      @ints.each do |int|
+        assert_equal int, @type.decode(int.to_s)
+        assert_equal int, @type.encode(int.to_s)
+      end
+    end
+
+    should 'convert integer values as integers' do
+      @ints.each do |int|
+        assert_equal int, @type.decode(int)
+        assert_equal int, @type.encode(int)
+      end
+    end
+
+    should 'handle non-integer objects gracefully if they have integer values' do
+      [1.0, '1.0', -12.0, '-12.0', 1245.0, '1245.0', Rational(1,1), Rational(4500,4500)].each do |val|
+        assert_equal val.to_i, @type.decode(val)
+        assert_equal val.to_i, @type.encode(val)
+      end
+    end
+
+    should 'throw type conversion exception if integer value does not appear to match input' do
+      ['abc', nil, 14.5, Rational(5,16)].each do |val|
+        assert_raise(SimpleMapper::TypeConversionException) { @type.encode(val) }
+        assert_raise(SimpleMapper::TypeConversionException) { @type.decode(val) }
+      end
+    end
+
+    should 'be registered as :integer type' do
+      assert_equal({:expected_type => @class,
+                    :name          => :integer,
+                    :converter     => @type}, SimpleMapper::Attributes.type_for(:integer))
+    end
+  end
 end

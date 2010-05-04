@@ -166,4 +166,23 @@ module SimpleMapper::Attributes::Types
     end
   end
   SimpleMapper::Attributes.register_type(:timestamp, DateTime, Timestamp)
+
+  module Integer
+    def self.convert(value)
+      converted = value.to_i
+      unless value == converted or value.to_s == converted.to_s or converted.to_f.to_s == value.to_s
+        raise SimpleMapper::TypeConversionException, "cannot convert #{value} to Integer"
+      end
+      converted
+    end
+
+    def self.encode(value)
+      convert(value)
+    end
+
+    def self.decode(value)
+      convert(value)
+    end
+  end
+  SimpleMapper::Attributes.register_type(:integer, ::Integer, Integer)
 end
