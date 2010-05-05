@@ -188,6 +188,10 @@ module SimpleMapper::Attributes::Types
 
   module TimestampHighRes
     require 'bigdecimal'
+    unless BigDecimal.method_defined?(:to_r)
+      require 'bigdecimal/util'
+    end
+
     SECOND_FRACTION = Rational(1, 24 * 60 * 60)
     PATTERN = /^([^.]+)\.(\d+)([-+]\d{4})$/
     OUT_FORMAT = '%Y-%m-%d %H:%M:%S.%N%z'
