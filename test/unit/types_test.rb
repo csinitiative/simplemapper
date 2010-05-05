@@ -265,9 +265,23 @@ class AttributesTypesTest < Test::Unit::TestCase
 
     should 'decode conformant strings into DateTimes' do
       @offsets.each do |offset|
-        assert_equal @time.new_offset(offset),
-                     @type.decode(@time.new_offset(offset).strftime(@format))
+        assert_equal @time.new_offset(offset).strftime(@format),
+                     @type.decode(@time.new_offset(offset).strftime(@format)).strftime(@format)
       end
+    end
+
+    # addresses bug in decoding from strings when fractional portion is smaller than .1 sec.
+    should 'decode conformat strings with small fractional portions into DateTimes' do
+      # get timestamp with no fractional seconds
+      time = DateTime.parse(DateTime.now.to_s)
+      # cycle through fractions: 0.111111111, 0.011111111, 0.001111111, etc.
+      checks = (9..18).collect do |factor|
+        sec_fraction = Rational(111111111, 10 ** factor)
+        fractional_time = time + (sec_fraction * Rational(1, 24 * 60 * 60))
+        fractional_time.strftime(@format)
+      end
+      results = checks.collect {|input| @type.decode(input).strftime(@format)}
+      assert_equal checks, results
     end
 
     should 'throw type conversion exceptions if strings do not conform' do

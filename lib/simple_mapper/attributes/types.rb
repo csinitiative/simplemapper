@@ -187,6 +187,7 @@ module SimpleMapper::Attributes::Types
   SimpleMapper::Attributes.register_type(:integer, ::Integer, Integer)
 
   module TimestampHighRes
+    require 'bigdecimal'
     SECOND_FRACTION = Rational(1, 24 * 60 * 60)
     PATTERN = /^([^.]+)\.(\d+)([-+]\d{4})$/
     OUT_FORMAT = '%Y-%m-%d %H:%M:%S.%N%z'
@@ -202,8 +203,8 @@ module SimpleMapper::Attributes::Types
       else
         if match = PATTERN.match(value.to_s)
           stamp, second_fraction, zone = match.captures
-          subseconds = second_fraction.to_i
-          DateTime.strptime(stamp + zone, IN_FORMAT) + ((10 ** (-1 * subseconds.to_s.size)) * subseconds * SECOND_FRACTION)
+          subseconds = BigDecimal('0.' + second_fraction).to_r
+          DateTime.strptime(stamp + zone, IN_FORMAT) + (subseconds * SECOND_FRACTION)
         else
           raise SimpleMapper::TypeConversionException, "cannot transform '#{value}' into hi-res DateTime"
         end
