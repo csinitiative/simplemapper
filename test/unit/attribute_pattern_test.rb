@@ -32,6 +32,16 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
       end
     end
 
+    should 'pass keys through unchanged for :to_simple_key' do
+      items = ['a string', :a_symbol, 666]
+      assert_equal(items, items.collect {|item| @instance.to_simple_key(item)})
+    end
+
+    should 'pass keys through unchanged for :from_simple_key' do
+      items = ['another string', :another_symbol, 444]
+      assert_equal(items, items.collect {|item| @instance.from_simple_key(item)})
+    end
+
     context 'with a SimpleMapper::Attributes-derived object' do
       setup do
         # initialize with non-matching keys
@@ -48,6 +58,19 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
           expected = {:a => 'A', :abc => 'ABC', :aarp => 'AARP'}
           @source_values.merge! expected
           assert_equal expected, @instance.source_value(@object)
+        end
+
+        should 'determine keys for the mapped structure via :from_simple_key' do
+          source_additional = {:a => 'A', :abc => 'ABC', :aarp => 'AARP'}
+          expected = source_additional.inject({}) do |hash, keyval|
+            key = keyval[0].to_s + ' transformed'
+            hash[key] = keyval[1]
+            @instance.expects(:from_simple_key).with(keyval[0]).returns(key)
+            hash
+          end
+          @source_values.merge! source_additional
+          result = @instance.source_value(@object)
+          assert_equal expected, result
         end
       end
 
@@ -100,6 +123,18 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
             @instance.expects(:value).with(@object).returns(@container_added.clone)
             result = @instance.to_simple(@object, @container_extra.clone)
             assert_equal @container_extra.merge(@container_added), result
+          end
+
+          should 'filters keys through :to_simple_key when adding to container' do
+            @instance.expects(:value).with(@object).returns(@container_added.clone)
+            expectation = {}
+            @container_added.each do |k, v|
+              key = k.to_s + ' transformed'
+              expectation[key] = v
+              @instance.expects(:to_simple_key).with(k).returns(key)
+            end
+            result = @instance.to_simple(@object, @container_extra.clone)
+            assert_equal @container_extra.merge(expectation), result
           end
 
           should 'encode typed values' do
