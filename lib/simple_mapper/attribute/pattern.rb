@@ -12,7 +12,7 @@ class SimpleMapper::Attribute::Pattern < SimpleMapper::Attribute
   end
 
   def source_value(object)
-    object.simple_mapper_source.inject({}) do |hash, keyval|
+    object.simple_mapper_source.inject(new_collection) do |hash, keyval|
       hash[from_simple_key(keyval[0])] = keyval[1] if pattern.match(keyval[0].to_s)
       hash
     end

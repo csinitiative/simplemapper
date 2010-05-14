@@ -54,6 +54,11 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
           assert_equal({}, @instance.source_value(@object))
         end
 
+        should 'get its container value from :new_collection' do
+          @instance.expects(:new_collection).returns(container = stub('container'))
+          assert_equal(container, @instance.source_value(@object))
+        end
+
         should 'return hash with key/value pairs for only the keys matching pattern' do
           expected = {:a => 'A', :abc => 'ABC', :aarp => 'AARP'}
           @source_values.merge! expected
