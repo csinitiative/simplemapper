@@ -209,24 +209,24 @@ class AttributesTypesTest < Test::Unit::TestCase
       @ints = [0, 54, 32, 65535, -12, -65535]
     end
 
-    should 'convert a numeric string into something integer-like' do
+    should 'convert a numeric string into something string-like' do
       @ints.each do |int|
         assert_equal int, @type.decode(int.to_s)
-        assert_equal int, @type.encode(int.to_s)
+        assert_equal int.to_s, @type.encode(int.to_s)
       end
     end
 
-    should 'convert integer values as integers' do
+    should 'convert integer values as strings' do
       @ints.each do |int|
         assert_equal int, @type.decode(int)
-        assert_equal int, @type.encode(int)
+        assert_equal int.to_s, @type.encode(int)
       end
     end
 
     should 'handle non-integer objects gracefully if they have integer values' do
       [1.0, '1.0', -12.0, '-12.0', 1245.0, '1245.0', Rational(1,1), Rational(4500,4500)].each do |val|
         assert_equal val.to_i, @type.decode(val)
-        assert_equal val.to_i, @type.encode(val)
+        assert_equal val.to_s, @type.encode(val)
       end
     end
 

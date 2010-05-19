@@ -177,7 +177,8 @@ module SimpleMapper::Attributes::Types
     end
 
     def self.encode(value)
-      convert(value)
+      convert(value) # to raise the TypeConversionException
+      value.to_s
     end
 
     def self.decode(value)
