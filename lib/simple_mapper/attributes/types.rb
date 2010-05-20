@@ -176,9 +176,10 @@ module SimpleMapper::Attributes::Types
       converted
     end
 
+    # raise a TypeConversionException if not a valid Integer
+    # otherwise, convert to a string
     def self.encode(value)
-      convert(value) # to raise the TypeConversionException
-      value.to_s
+      convert(value).to_s
     end
 
     def self.decode(value)
