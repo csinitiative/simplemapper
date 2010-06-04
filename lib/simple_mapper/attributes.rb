@@ -46,6 +46,7 @@ module SimpleMapper
 
     def reset_attribute(attr)
       @simple_mapper_init.delete attr
+      attribute_changed!(attr, false)
       remove_instance_variable(:"@#{attr}")
     end
 
@@ -82,8 +83,8 @@ module SimpleMapper
       @simple_mapper_changes ||= {}
     end
 
-    def attribute_changed!(attr)
-      attribute_object_for(attr).changed!(self)
+    def attribute_changed!(attr, flag=true)
+      attribute_object_for(attr).changed!(self, flag)
     end
 
     def attribute_changed?(attr)

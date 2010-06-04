@@ -73,8 +73,13 @@ module SimpleMapper
       container[options[:string_keys] ? key.to_s : key] = value unless value.nil? and options[:defined]
     end
 
-    def changed!(object)
-      object.simple_mapper_changes[name] = true
+    def changed!(object, flag=true)
+      if flag
+        object.simple_mapper_changes[name] = true
+      else
+        object.simple_mapper_changes.delete(name)
+        false
+      end
     end
 
     def changed?(object)

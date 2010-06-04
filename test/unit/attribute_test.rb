@@ -54,6 +54,12 @@ class AttributeTest < Test::Unit::TestCase
         assert_equal({@name => true}, @changes)
       end
 
+      should 'remove the attribute from changes hash when instance given to :changed! along with false' do
+        @changes[@name] = true
+        @instance.changed!(@object, false)
+        assert_equal({}, @changes)
+      end
+
       should 'return truth of changed state for attribute on instance provided to :changed? based on instance.simple_mapper_changes' do
         assert_equal false, @instance.changed?(@object)
         @changes[@name] = true

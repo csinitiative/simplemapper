@@ -254,6 +254,16 @@ class AttributesTest < Test::Unit::TestCase
           @instance.reset_attribute(:foo)
           assert_equal 'Foo!', @instance.read_attribute(:foo)
         end
+
+        should 'clear the changed? status of the specified attribute' do
+          @instance = @class.new
+          seq = sequence('change states')
+          attrib = @class.simple_mapper.attributes[:foo]
+          attrib.expects(:changed!).with(@instance, true).once.in_sequence(seq).returns(true)
+          attrib.expects(:changed!).with(@instance, false).once.in_sequence(seq).returns(false)
+          @instance.write_attribute(:foo, 'new val')
+          @instance.reset_attribute(:foo)
+        end
       end
 
       # keep me
@@ -319,12 +329,12 @@ class AttributesTest < Test::Unit::TestCase
       end
 
       should 'mark an attribute as changed once it has been assigned to' do
-        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance)
+        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance, true)
         @instance.change_me = 'Thou art changed'
       end
 
       should 'mark an attribute as changed via the :attribute_changed! method' do
-        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance)
+        @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance, true)
         @instance.attribute_changed! :change_me
       end
 
