@@ -307,6 +307,48 @@ class AttributesTest < Test::Unit::TestCase
           assert_equal :expected_default, result
         end
       end
+
+      context 'freeze' do
+        setup do
+          @instance = @class.new(:foo => @value = 'foo')
+        end
+
+        should 'prevent further attribute writes' do
+          @instance.freeze
+          assert_raises(RuntimeError) { @instance.foo = :x }
+          # verify that value is unchanged
+          assert_equal @value, @instance.foo
+        end
+
+        should 'allow attribute reads' do
+          @instance.freeze
+          assert_equal @value, @instance.foo
+        end
+
+        should 'support per-attribute handling via :freeze_for per attribute' do
+          @class.maps :foo2
+          @class.maps :foo3
+          [:foo, :foo2, :foo3].each do |attrib|
+            @instance.attribute_object_for(attrib).expects(:freeze_for).with(@instance)
+          end
+          @instance.freeze
+        end
+      end
+
+      context 'frozen?' do
+        setup do
+          @instance = @class.new(:foo => 'foo')
+        end
+
+        should 'default to false' do
+          assert_equal false, @instance.frozen?
+        end
+
+        should 'be true after a :freeze call' do
+          @instance.freeze
+          assert_equal true, @instance.frozen?
+        end
+      end
     end
 
     context 'change tracking' do
@@ -453,6 +495,11 @@ class AttributesTest < Test::Unit::TestCase
 
     should 'map back to simple structure' do
       assert_equal @source, @instance.to_simple
+    end
+
+    should 'freeze nested mappers when frozen from containing object' do
+      @instance.freeze
+      assert_equal true, @instance.home_address.frozen?
     end
   end
 end

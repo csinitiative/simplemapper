@@ -43,6 +43,22 @@ class AttributeTest < Test::Unit::TestCase
       assert_equal :foo, @instance.value(target)
     end
 
+    context 'freeze_for' do
+      should 'do nothing for regular attributes' do
+        target = mock('target')
+        target.expects(:freeze).never
+        @instance.freeze_for(target)
+      end
+
+      should "invoke freeze on instance's nested mapper" do
+        target = mock('mapper target')
+        target.stubs(@instance.name).returns(mapped_obj = mock('mapped instance'))
+        mapped_obj.expects(:freeze).once.with
+        @instance.stubs(:mapper).returns(:some_mapper)
+        @instance.freeze_for(target)
+      end
+    end
+
     context 'change tracking' do
       setup do
         @changes = {}

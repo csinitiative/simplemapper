@@ -64,6 +64,20 @@ module SimpleMapper::Attribute::Collection
     key
   end
 
+  def freeze_for(object)
+    val = value(object)
+    if val
+      if mapper
+        if val.respond_to?(:values)
+          val.values.each {|member| member.freeze}
+        else
+          val.each {|member| member.freeze}
+        end
+      end
+      val.freeze
+    end
+  end
+
   # Converts the _object_'s attribute value into its simple representation,
   # putting the keys/values into _container_.  This is conceptually consistent
   # with +SimpleMapper::Attributes#to_simple+, but adds a few collection-oriented

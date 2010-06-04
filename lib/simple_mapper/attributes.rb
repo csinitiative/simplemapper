@@ -51,6 +51,7 @@ module SimpleMapper
     end
 
     def write_attribute(attr, value)
+      raise(RuntimeError, "can't modify frozen object") if frozen?
       instance_variable_set(:"@#{attr}", value)
       @simple_mapper_init[attr] = true
       attribute_changed! attr
@@ -96,6 +97,15 @@ module SimpleMapper
         list << keyval[0] if keyval[1].changed?(self)
         list
       end
+    end
+
+    def freeze
+      self.class.simple_mapper.attributes.values.each {|attribute| attribute.freeze_for(self)}
+      simple_mapper_changes.freeze
+    end
+
+    def frozen?
+      simple_mapper_changes.frozen?
     end
 
     attr_reader :simple_mapper_source

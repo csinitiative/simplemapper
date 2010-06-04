@@ -96,6 +96,12 @@ module SimpleMapper
           nil
       end
     end
+
+    def freeze_for(object)
+      if mapper and val = value(object)
+        val.freeze
+      end
+    end
   end
 
 end

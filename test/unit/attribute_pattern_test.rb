@@ -117,6 +117,35 @@ class SimpleMapperAttributePatternTest < Test::Unit::TestCase
         end
       end
 
+      context 'for freeze_for' do
+        setup do
+          @collection = [:a, :b, :c].inject({}) {|hash, name| hash[name] = stub(name.to_s); hash}
+          @object = stub('object')
+          @instance.stubs(:value).with(@object).returns(@collection)
+        end
+
+        context 'with simple values' do
+          should 'freeze the collection and leave members alone' do
+            @collection.values.each {|member| member.expects(:freeze).never}
+            @collection.expects(:freeze).with.once
+            @instance.freeze_for(@object)
+          end
+        end
+
+        context 'with mapped values' do
+          setup do
+            @instance.mapper = stub('mapper', :encode => 'foo')
+            @instance.type = @instance.mapper
+          end
+
+          should 'freeze the collection and each collection member' do
+            @collection.values.each {|member| member.expects(:freeze).with.once}
+            @collection.expects(:freeze).with.once
+            @instance.freeze_for(@object)
+          end
+        end
+      end
+
       context 'for to_simple' do
         context 'with simple values' do
           setup do
