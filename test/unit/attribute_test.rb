@@ -81,6 +81,20 @@ class AttributeTest < Test::Unit::TestCase
         @changes[@name] = true
         assert_equal true, @instance.changed?(@object)
       end
+
+      should 'delegate :changed? call to mapped object if attribute has a mapper' do
+        @instance.stubs(:mapper).returns(:foo)
+        seq = sequence('value calls')
+        true_mapper = stub('mapped object with true')
+        false_mapper = stub('mapped object with false')
+        # value must be checked to retrieve mapped object, so this is a reasonable expectation
+        @instance.expects(:value).with(@object).in_sequence(seq).returns(true_mapper)
+        true_mapper.expects(:changed?).with.in_sequence(seq).returns(true)
+        @instance.expects(:value).with(@object).in_sequence(seq).returns(false_mapper)
+        false_mapper.expects(:changed?).with.in_sequence(seq).returns(false)
+        result = [@instance.changed?(@object), @instance.changed?(@object)]
+        assert_equal [true, false], result
+      end
     end
 
     context 'when encoding' do

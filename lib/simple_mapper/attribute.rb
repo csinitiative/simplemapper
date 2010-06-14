@@ -83,7 +83,12 @@ module SimpleMapper
     end
 
     def changed?(object)
-      (object.simple_mapper_changes[name] && true) || false
+      if mapper
+        val = value(object)
+        val ? val.changed? : false
+      else
+        (object.simple_mapper_changes[name] && true) || false
+      end
     end
 
     def default_value(object)

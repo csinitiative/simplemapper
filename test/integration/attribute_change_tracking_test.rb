@@ -41,6 +41,16 @@ class AttributeChangeTrackingTest < Test::Unit::TestCase
       assert_equal false, @instance.attribute_changed?(:b)
     end
 
+    should 'indicate change on nested attribute if nested attribute has a newly-assigned member' do
+      @class.maps :nested do
+        maps :inner_a
+        maps :inner_b
+      end
+      assert_equal false, @instance.attribute_changed?(:nested)
+      @instance.nested.inner_a = 'foo'
+      assert_equal true, @instance.attribute_changed?(:nested)
+    end
+
     context 'when converting :to_simple with :changed' do
       should 'result in an empty hash if no attributes have been changed' do
         assert_equal({}, @instance.to_simple(:changed => true))
@@ -56,6 +66,17 @@ class AttributeChangeTrackingTest < Test::Unit::TestCase
         @instance.b = new_b = 'new_b'
         assert_equal({:a => new_a, :b => new_b}, @instance.to_simple(:changed => true))
       end
+
+      should 'result in nested hash if the class has nested attributes' do
+        @class.maps :nested do
+          maps :inner_a
+          maps :inner_b
+        end
+        @instance.a = new_a = 'new_a'
+        @instance.nested.inner_a = new_inner_a = 'new_inner_a'
+        assert_equal({:a => new_a, :nested => {:inner_a => new_inner_a}}, @instance.to_simple(:changed => true))
+      end
+
     end
   end
 end
