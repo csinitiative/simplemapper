@@ -73,11 +73,15 @@ module SimpleMapper
       container[options[:string_keys] ? key.to_s : key] = value unless value.nil? and options[:defined]
     end
 
+    def change_tracking_for(object)
+      object.simple_mapper_changes
+    end
+
     def changed!(object, flag=true)
       if flag
-        object.simple_mapper_changes[name] = true
+        change_tracking_for(object)[name] = true
       else
-        object.simple_mapper_changes.delete(name)
+        change_tracking_for(object).delete(name)
         false
       end
     end
@@ -87,7 +91,7 @@ module SimpleMapper
         val = value(object)
         val ? val.changed? : false
       else
-        (object.simple_mapper_changes[name] && true) || false
+        (change_tracking_for(object)[name] && true) || false
       end
     end
 

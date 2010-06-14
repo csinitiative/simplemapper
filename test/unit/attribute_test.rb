@@ -59,10 +59,18 @@ class AttributeTest < Test::Unit::TestCase
       end
     end
 
+    should 'use target object :simple_mapper_changes as state hash of :change_tracking_for' do
+      changes = {}
+      object = mock('object', :simple_mapper_changes => changes)
+      result = @instance.change_tracking_for(object)
+      assert_equal result.object_id, changes.object_id
+    end
+
     context 'change tracking' do
       setup do
         @changes = {}
-        @object = stub('object', :simple_mapper_changes => @changes)
+        @object = stub('object')
+        @instance.stubs(:change_tracking_for).with(@object).returns(@changes)
       end
 
       should 'mark the attribute as changed within an instance.simple_mapper_changes hash when instance given to :changed!' do
