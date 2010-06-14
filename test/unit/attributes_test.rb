@@ -380,26 +380,53 @@ class AttributesTest < Test::Unit::TestCase
         @instance.attribute_changed! :change_me
       end
 
-      should 'return empty list for :changed_attributes when nothing has been assigned' do
-        @instance.class.simple_mapper.attributes.each do |key, attr|
-          attr.expects(:changed?).with(@instance).returns(false)
+      context 'when nothing has been assigned' do
+        setup do
+          @instance.class.simple_mapper.attributes.each do |key, attr|
+            attr.expects(:changed?).with(@instance).returns(false)
+          end
         end
-        assert_equal [], @instance.changed_attributes
+
+        should 'return empty list for :changed_attributes' do
+          assert_equal [], @instance.changed_attributes
+        end
+
+        should 'return false for :changed?' do
+          assert_equal false, @instance.changed?
+        end
       end
 
-      should 'return single-item list for :changed_attributes when an attribute is marked as changed' do
-        @instance.class.simple_mapper.attributes.each do |key, attr|
-          attr.expects(:changed?).with(@instance).returns(key == :change_me ? true : false)
+      context 'when one attribute is marked as changed' do
+        setup do
+          @instance.class.simple_mapper.attributes.each do |key, attr|
+            attr.expects(:changed?).with(@instance).returns(key == :change_me ? true : false)
+          end
         end
-        assert_equal [:change_me], @instance.changed_attributes
+
+        should 'return single-item list for :changed_attributes when an attribute is marked as changed' do
+          assert_equal [:change_me], @instance.changed_attributes
+        end
+
+        should 'return true for :changed?' do
+          assert @instance.changed?
+        end
       end
 
-      should 'return two-item list for :changed_attributes when both attrs were assigned' do
-        changes = [:change_me, :do_not_change_me]
-        @instance.class.simple_mapper.attributes.each do |key, attr|
-          attr.expects(:changed?).with(@instance).returns(changes.include?(key) ? true : false)
+      context 'when multiple attributes are marked as changed' do
+        setup do
+          @changes = [:change_me, :do_not_change_me]
+          @instance.class.simple_mapper.attributes.each do |key, attr|
+            attr.expects(:changed?).with(@instance).returns(@changes.include?(key) ? true : false)
+          end
         end
-        assert_equal([:change_me, :do_not_change_me], @instance.changed_attributes.sort_by {|sym| sym.to_s})
+
+        should 'return two-item list for :changed_attributes when both attrs were assigned' do
+          assert_equal(@changes, @instance.changed_attributes.sort_by {|sym| sym.to_s})
+        end
+
+        should 'return true for :changed' do
+          assert @instance.changed?
+        end
       end
     end
 

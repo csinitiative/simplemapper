@@ -99,6 +99,10 @@ module SimpleMapper
       end
     end
 
+    def changed?
+      changed_attributes.size > 0
+    end
+
     def freeze
       self.class.simple_mapper.attributes.values.each {|attribute| attribute.freeze_for(self)}
       simple_mapper_changes.freeze
