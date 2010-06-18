@@ -258,6 +258,14 @@ class AttributeTest < Test::Unit::TestCase
         assert_equal result, @container
       end
 
+      should 'assign key with nil value for mapper if :defined is false and value is nil' do
+        @instance.mapper = mapper = mock('mapper')
+        @object.stubs(@name).returns(nil)
+        result = @container.clone
+        @instance.to_simple @object, @container
+        assert_equal result.merge({@key => nil}), @container
+      end
+
       should 'use the mapper as type if a mapper is set' do
         @instance.mapper = mapper = mock('mapper')
         assert_equal mapper, @instance.type

@@ -69,7 +69,11 @@ module SimpleMapper
 
     def to_simple(object, container, options = {})
       raw_value = self.value(object)
-      value = mapper ? raw_value.to_simple(options) : encode(raw_value)
+      if mapper
+        value = raw_value.nil? ? nil : raw_value.to_simple(options)
+      else
+        value = encode(raw_value)
+      end
       container[options[:string_keys] ? key.to_s : key] = value unless value.nil? and options[:defined]
     end
 
