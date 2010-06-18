@@ -103,6 +103,14 @@ class AttributeTest < Test::Unit::TestCase
         result = [@instance.changed?(@object), @instance.changed?(@object)]
         assert_equal [true, false], result
       end
+
+      should 'return truth of changed state for attribute if attribute has a mapper and value is nil' do
+        @instance.stubs(:mapper).returns(:foo)
+        @instance.stubs(:value).with(@object).returns(nil)
+        assert_equal false, @instance.changed?(@object)
+        @changes[@name] = true
+        assert_equal true, @instance.changed?(@object)
+      end
     end
 
     context 'when encoding' do

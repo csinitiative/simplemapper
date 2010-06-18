@@ -91,9 +91,8 @@ module SimpleMapper
     end
 
     def changed?(object)
-      if mapper
-        val = value(object)
-        val ? val.changed? : false
+      if mapper and val = value(object)
+        val.changed?
       else
         (change_tracking_for(object)[name] && true) || false
       end
