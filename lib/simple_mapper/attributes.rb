@@ -81,7 +81,7 @@ module SimpleMapper
     end
 
     def simple_mapper_changes
-      @simple_mapper_changes ||= {}
+      @simple_mapper_changes ||= SimpleMapper::ChangeHash.new
     end
 
     def attribute_changed!(attr, flag=true)
@@ -92,10 +92,23 @@ module SimpleMapper
       attribute_object_for(attr).changed?(self)
     end
 
+    def all_changed!
+      simple_mapper_changes.all_changed!
+    end
+
+    def all_changed?
+      simple_mapper_changes.all
+    end
+
     def changed_attributes
-      self.class.simple_mapper.attributes.inject([]) do |list, keyval|
-        list << keyval[0] if keyval[1].changed?(self)
-        list
+      attribs = self.class.simple_mapper.attributes
+      if simple_mapper_changes.all
+        attribs.keys
+      else
+        attribs.inject([]) do |list, keyval|
+          list << keyval[0] if keyval[1].changed?(self)
+          list
+        end
       end
     end
 
@@ -117,13 +130,17 @@ module SimpleMapper
     def initialize(values = {})
       @simple_mapper_source = values
       @simple_mapper_init = {}
-      @simple_mapper_changes = {}
+      @simple_mapper_changes = SimpleMapper::ChangeHash.new
     end
 
     def to_simple(options = {})
-      changes = (options[:changed] && true) || false
+      clean_opt = options.clone
+      # if all_changed? true, we disregard changed flag entirely, so the entire graph
+      # appears to be changed in result set.
+      clean_opt.delete(:changed) if all_changed?
+      changes = (clean_opt[:changed] && true) || false
       self.class.simple_mapper.attributes.values.inject({}) do |container, attrib|
-        attrib.to_simple(self, container, options) if !changes or attrib.changed?(self)
+        attrib.to_simple(self, container, clean_opt) if !changes or attrib.changed?(self)
         container
       end
     end

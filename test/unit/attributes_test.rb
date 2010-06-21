@@ -222,6 +222,15 @@ class AttributesTest < Test::Unit::TestCase
         @options[:changed] = true
         assert_equal expectation, @instance.to_simple(@options)
       end
+
+      should 'return values of all attributes from :to_simple when :all_changed? is true on receiver and :changed is true' do
+        @instance.stubs(:all_changed?).returns(true)
+        @attrib_a.stubs(:changed?).with(@instance).returns(true)
+        @sttrib_b.stubs(:changed?).with(@instance).returns(false)
+        opt = @options.clone
+        opt[:changed] = true
+        assert_equal @values.clone, @instance.to_simple(opt)
+      end
     end
 
     context 'simpler_mapper_source' do
@@ -358,10 +367,10 @@ class AttributesTest < Test::Unit::TestCase
         @instance = @class.new(:change_me => 'change me', :do_not_change_me => 'no changing')
       end
 
-      should 'automatically instantiate an empty changes hash per instance' do
-        assert_equal({}, @instance.simple_mapper_changes)
+      should 'automatically instantiate an empty ChangeHash per instance' do
+        assert_equal(SimpleMapper::ChangeHash.new, @instance.simple_mapper_changes)
         @other = @class.new
-        assert_equal({}, @other.simple_mapper_changes)
+        assert_equal(SimpleMapper::ChangeHash.new, @other.simple_mapper_changes)
         assert_not_equal @instance.simple_mapper_changes.object_id, @other.simple_mapper_changes.object_id
       end
 
@@ -378,6 +387,25 @@ class AttributesTest < Test::Unit::TestCase
       should 'mark an attribute as changed via the :attribute_changed! method' do
         @instance.class.simple_mapper.attributes[:change_me].expects(:changed!).with(@instance, true)
         @instance.attribute_changed! :change_me
+      end
+
+      should 'flag all_changed on change tracking hash through :all_changed! method' do
+        @instance.simple_mapper_changes.expects(:all_changed!).with().returns(true)
+        @instance.all_changed!
+      end
+
+      should "return value of change-tracking hash's :all for :all_changed?" do
+        @instance.simple_mapper_changes.stubs(:all).returns(true)
+        assert_equal true, @instance.all_changed?
+        @instance.simple_mapper_changes.stubs(:all).returns(false)
+        assert_equal false, @instance.all_changed?
+      end
+
+      should 'return all attributes as changed when change-tracker marked with all' do
+        @instance.simple_mapper_changes.stubs(:all).returns(true)
+        attribs = @instance.changed_attributes.sort_by {|x| x.to_s}
+        expected = @instance.class.simple_mapper.attributes.keys.sort_by {|x| x.to_s}
+        assert_equal expected, attribs
       end
 
       context 'when nothing has been assigned' do
