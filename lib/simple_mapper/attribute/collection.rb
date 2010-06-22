@@ -15,7 +15,9 @@ module SimpleMapper::Attribute::Collection
   def transformed_source_value(object)
     val = source_value(object)
     val = default_value(object) if val.nil?
-    type ? apply_type(val) : val
+    val = apply_type(val) if type
+    val.change_tracking = true if val.respond_to?(:change_tracking)
+    val
   end
 
   def member_key?(key)

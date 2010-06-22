@@ -48,5 +48,87 @@ class CollectionHashTest < Test::Unit::TestCase
       result << instance.build(:foo, :bar, :a => 'A', :b => 'B')
       assert_equal [:one, :two, :three], result
     end
+
+    context 'tracking changes' do
+      should 'be off by default' do
+        instance = @class.new
+        assert_equal false, (instance.change_tracking || false)
+      end
+
+      context 'for assignment' do
+        should 'mark newly-assigned key as changed' do
+          instance = @class.new
+          instance.change_tracking = true
+          assert_equal([], instance.changed_members)
+          instance[:a] = 'A'
+          assert_equal([:a], instance.changed_members)
+        end
+
+        should 'mark replaced key as changed' do
+          instance = @class.new({:a => 'A'})
+          instance.change_tracking = true
+          assert_equal([], instance.changed_members)
+          instance[:a] = 'Aprime'
+          assert_equal([:a], instance.changed_members)
+        end
+
+        should 'mark replaced key as changed and mark entire value as changed if new value supports :all_changed!' do
+          instance = @class.new({:a => 'A'})
+          instance.change_tracking = true
+          assert_equal([], instance.changed_members)
+          obj = stub('new value')
+          obj.expects(:all_changed!).with.returns(true)
+          instance[:a] = obj
+          assert_equal([:a], instance.changed_members)
+        end
+
+        should 'not track any changes on assignment if track_changes is false' do
+          instance = @class.new({:a => 'A', :b => 'B'})
+          instance.change_tracking = false
+          assert_equal([], instance.changed_members)
+          instance[:a] = 'A prime'
+          instance[:b] = nil
+          instance[:c] = 'C'
+          assert_equal([], instance.changed_members)
+        end
+      end
+
+      context 'for deletion' do
+        setup do
+          @key = :delete_me
+          @value = 'delete me!' 
+          @keep_key = :keep_me
+          @keep_value = 'keep me!'
+          @instance = @class.new({@key => @value, @keep_key => @keep_value})
+          @instance.change_tracking = true
+        end
+
+        should 'mark key as changed when key is specified in a :delete' do
+          assert_equal @value, @instance.delete(@key)
+          assert_equal false, @instance.key?(@key)
+          assert_equal [@key], @instance.changed_members
+        end
+
+        should 'mark key as changed when key is removed via :delete_if' do
+          assert_equal({@keep_key => @keep_value}, @instance.delete_if {|k,v| k == @key})
+          assert_equal false, @instance.key?(@key)
+          assert_equal [@key], @instance.changed_members
+        end
+
+        should 'mark key as changed when key is removed via :reject!' do
+          assert_equal({@keep_key => @keep_value}, @instance.reject! {|k,v| k == @key})
+          assert_equal false, @instance.key?(@key)
+          assert_equal [@key], @instance.changed_members
+        end
+
+        should 'mark nothing as changed if change_tracking is false at delete time' do
+          @instance.change_tracking = false
+          @instance.delete(:a)
+          @instance.delete_if {|k, v| true}
+          assert_equal [], @instance.changed_members
+        end
+      end
+    end
+
   end
 end
