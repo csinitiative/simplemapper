@@ -95,6 +95,75 @@ module SimpleMapper
       def inject(*args)
         (0..size - 1).inject(*args) {|accum, key| yield(accum, [key, self[key]])}
       end
+
+      def <<(value)
+        member_changed!(size, value)
+        super(value)
+      end
+
+      def push(*values)
+        values.each {|val| self << val }
+        self
+      end
+
+      def slice!(start_or_range, length=1)
+        result = nil
+        original_size = size
+        case start_or_range
+          when Range
+            result = super(start_or_range)
+            if result
+              change_min = start_or_range.min
+            end
+          else
+            result = super(start_or_range, length)
+            if result
+              change_min = start_or_range < 0 ? original_size + start_or_range : start_or_range
+            end
+        end
+        if result
+          change_min = 0 if change_min < 0
+          (change_min..original_size - 1).each {|index| member_changed!(index, self[index]) }
+        end
+        result
+      end
+
+      alias_method :_delete, :delete_at
+      private :_delete
+
+      def delete_at(index)
+        original_size = size
+        result = _delete(index)
+        if size != original_size
+          (index..original_size - 1).each {|idx| member_changed!(idx, self[idx])}
+        end
+        result
+      end
+
+      def reject!
+        first = nil
+        last = size - 1
+        index = 0
+        while index < size
+          if yield(self[index])
+            first ||= index
+            _delete(index)
+          else
+            index += 1
+          end
+        end
+        if first
+          (first..last).each {|idx| member_changed!(idx, self[idx])}
+          self
+        else
+          nil 
+        end
+      end
+
+      def delete_if
+        reject! {|x| yield(x)}
+        self
+      end
     end
   end
 end
