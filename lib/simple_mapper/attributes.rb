@@ -136,8 +136,14 @@ module SimpleMapper
     def to_simple(options = {})
       clean_opt = options.clone
       # if all_changed? true, we disregard changed flag entirely, so the entire graph
-      # appears to be changed in result set.
-      clean_opt.delete(:changed) if all_changed?
+      # appears to be changed in result set.  We
+      # also propagate the :all flag, which tells
+      # objects that support it to include information
+      # about members that were removed.
+      if all_changed?
+        clean_opt.delete(:changed)
+        clean_opt[:all] = true
+      end
       changes = (clean_opt[:changed] && true) || false
       self.class.simple_mapper.attributes.values.inject({}) do |container, attrib|
         attrib.to_simple(self, container, clean_opt) if !changes or attrib.changed?(self)

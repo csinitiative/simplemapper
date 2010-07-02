@@ -223,12 +223,13 @@ class AttributesTest < Test::Unit::TestCase
         assert_equal expectation, @instance.to_simple(@options)
       end
 
-      should 'return values of all attributes from :to_simple when :all_changed? is true on receiver and :changed is true' do
+      should 'return values of all attributes and propagate :all option from :to_simple when :all_changed? is true on receiver and :changed is true' do
         @instance.stubs(:all_changed?).returns(true)
         @attrib_a.stubs(:changed?).with(@instance).returns(true)
         @sttrib_b.stubs(:changed?).with(@instance).returns(false)
         opt = @options.clone
         opt[:changed] = true
+        @options[:all] = true
         assert_equal @values.clone, @instance.to_simple(opt)
       end
     end

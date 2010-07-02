@@ -56,12 +56,17 @@ class CollectionHashTest < Test::Unit::TestCase
       end
 
       context 'for assignment' do
-        should 'mark newly-assigned key as changed' do
+        should 'mark newly-assigned key as changed and mark entre value as changed if new value supports :all_changed' do
           instance = @class.new
           instance.change_tracking = true
           assert_equal([], instance.changed_members)
           instance[:a] = 'A'
           assert_equal([:a], instance.changed_members)
+
+          change_me = stub('change_me')
+          change_me.expects(:all_changed!).with
+          instance[:b] = change_me
+          assert_equal([:a, :b], instance.changed_members)
         end
 
         should 'mark replaced key as changed' do

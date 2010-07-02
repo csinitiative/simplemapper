@@ -20,7 +20,7 @@ module SimpleMapper
         # whether or not value is itself a mapper.  If it is, we want it to consider
         # all of its attributes changed, since they are all replacing whatever was
         # previously associated with +key+ in the collection.
-        if is_member?(key) and ! value.nil? and value.respond_to?(:all_changed!)
+        if ! value.nil? and value.respond_to?(:all_changed!)
           value.all_changed!
         end
         simple_mapper_changes[key] = true

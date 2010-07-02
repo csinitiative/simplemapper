@@ -80,6 +80,13 @@ module SimpleMapper::Attribute::Collection
     end
   end
 
+  def changed?(object)
+    val = value(object)
+    return true if val.changed_members.size > 0
+    return true if mapper and val.find {|keyval| keyval[1].changed?}
+    false
+  end
+
   # Converts the _object_'s attribute value into its simple representation,
   # putting the keys/values into _container_.  This is conceptually consistent
   # with +SimpleMapper::Attributes#to_simple+, but adds a few collection-oriented
@@ -95,10 +102,29 @@ module SimpleMapper::Attribute::Collection
     val = value(object)
     mapper = self.mapper
     strings = options[:string_keys] || false
-    val.inject(container) do |hash, keyvalue|
-      key = to_simple_key(keyvalue[0])
-      container[strings ? key.to_s : key] = mapper ? keyvalue[1].to_simple(options) : encode(keyvalue[1])
-      container
+    changed_members = change_tracking_for(val)
+    if options[:changed]
+      if mapper
+        change_proc = Proc.new do |key, val|
+          changed_members[key] or (! val.nil? and val.changed?)
+        end
+      else
+        change_proc = Proc.new {|k, v| changed_members[k]}
+      end
+    else
+      change_proc = nil
     end
+    changes = options[:changed] || false
+    container = val.inject(container) do |hash, keyvalue|
+      key = to_simple_key(keyvalue[0])
+      hash[strings ? key.to_s : key] = mapper ? keyvalue[1].to_simple(options) : encode(keyvalue[1]) if ! change_proc or change_proc.call(*keyvalue)
+      hash
+    end
+    if (change_proc or options[:all]) and ! options[:defined]
+      changed_members.keys.find_all {|x| ! val.is_member?(x)}.each do |key|
+        container[to_simple_key(key)] = nil
+      end
+    end
+    container
   end
 end

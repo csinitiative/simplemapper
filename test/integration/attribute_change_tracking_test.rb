@@ -77,6 +77,105 @@ class AttributeChangeTrackingTest < Test::Unit::TestCase
         assert_equal({:a => new_a, :nested => {:inner_a => new_inner_a}}, @instance.to_simple(:changed => true))
       end
 
+      context 'and a hash collection attribute' do
+        setup do
+          @collection_class = Class.new(SimpleMapper::Attribute) do
+            include SimpleMapper::Attribute::Collection
+
+            def prefix
+              '__'
+            end
+
+            def member_key?(key)
+              key.to_s[0..1] == prefix
+            end
+
+            def from_simple_key(key)
+              key.to_s.sub(prefix, '').to_sym
+            end
+
+            def to_simple_key(key)
+              (prefix + key.to_s).to_sym
+            end
+          end
+
+          @class.maps :collection, :attribute_class => @collection_class
+          @instance = @class.new(@values.clone)
+        end
+
+        should 'have no output for the collection if no members were changed' do
+          @instance.a = new_a = 'new_a'
+          assert_equal({:a => new_a}, @instance.to_simple(:changed => true))
+        end
+
+        should 'have output for items added to the collection' do
+          @instance.collection[:first] = 'first'
+          @instance.collection[:second] = 'second'
+          @instance.collection[:third] = 'third'
+          assert_equal(
+            {
+              :__first  => 'first',
+              :__second => 'second',
+              :__third  => 'third',
+            },
+            @instance.to_simple(:changed => true)
+          )
+        end
+
+        should 'have output for items altered in the collection' do
+          @instance = @class.new(:__first => 'first', :__second => 'second', :__third => 'third')
+          @instance.collection[:second] = 'new second'
+          @instance.collection.delete(:third)
+          @instance.collection[:fourth] = 'fourth'
+          assert_equal(
+            {:__second => 'new second',
+             :__third  => nil,
+             :__fourth => 'fourth'},
+            @instance.to_simple(:changed => true)
+          )
+        end
+
+        context 'with mapped members' do
+          setup do
+            @mapped_collection_class = Class.new(@collection_class) do
+              def prefix
+                '--'
+              end
+            end
+            @class.maps :mapped_collection, :attribute_class => @mapped_collection_class do
+              maps :name
+              maps :id, :type => :simple_uuid, :default => :from_type
+            end
+          end
+
+          should 'have output for items added to collection' do
+            @instance.mapped_collection[:me] = @instance.mapped_collection.build(:name => 'me')
+            @instance.mapped_collection[:you] = @instance.mapped_collection.build(:name => 'you')
+            expected = {
+              :'--me'  => {:name => 'me',  :id => @instance.mapped_collection[:me].id},
+              :'--you' => {:name => 'you', :id => @instance.mapped_collection[:you].id},
+            }
+            assert_equal expected, @instance.to_simple(:changed => true)
+          end
+
+          should 'have output for items removed from collection' do
+            @instance = @class.new(:'--me' => {:name => 'me'}, :'--you' => {:name => 'you'})
+            @instance.mapped_collection.delete(:you)
+            assert_equal({:'--you' => nil}, @instance.to_simple(:changed => true))
+          end
+
+          should 'have output for all attributes in replaced member' do
+            @instance = @class.new(:'--me' => {:name => 'me'})
+            @instance.mapped_collection[:me] = @instance.mapped_collection.build
+            assert_equal({:'--me' => {:name => nil, :id => @instance.mapped_collection[:me].id}}, @instance.to_simple(:changed => true))
+          end
+        end
+      end
+
+      context 'and an array collection attribute' do
+        setup do
+        end
+      end
     end
   end
 end

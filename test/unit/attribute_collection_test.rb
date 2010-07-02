@@ -24,6 +24,54 @@ class AttributeCollectionTest < Test::Unit::TestCase
       end
     end
 
+    context 'changed?' do
+      setup do
+        @collection = {}
+        @instance.stubs(:value).with(@object).returns(@collection)
+      end
+
+      context 'with empty changed_members' do
+        setup do
+          @collection.stubs(:changed_members).returns(SimpleMapper::ChangeHash.new)
+        end
+
+        should 'be false' do
+          assert_equal false, @instance.changed?(@object)
+        end
+
+        context 'and a mapper' do
+          setup do
+            @mapper = stub('mapper')
+            @instance.mapper = @mapper
+            @keys = [:a, :b, :c]
+            @keys.each do |key|
+              item = stub('item_' + key.to_s)
+              @collection[key] = item
+            end
+          end
+
+          should 'be false if no mapped values are changed' do
+            @collection.values.each {|item| item.stubs(:changed?).with.returns(false)}
+            assert_equal false, @instance.changed?(@object)
+          end
+
+          should 'be true if any mapped values are changed' do
+            item = @keys.pop
+            @collection[item].stubs(:changed?).with.returns(true)
+            @keys.each {|x| @collection[x].stubs(:changed?).with.returns(false)}
+            assert_equal true, @instance.changed?(@object)
+          end
+        end
+      end
+
+      should 'be true if changed_members is populated' do
+        hash = SimpleMapper::ChangeHash.new
+        hash[:foo] = true
+        @collection.stubs(:changed_members).returns(hash)
+        assert_equal true, @instance.changed?(@object)
+      end
+    end
+
     should 'pass keys through unchanged for :to_simple_key' do
       items = ['a string', :a_symbol, 666]
       assert_equal(items, items.collect {|item| @instance.to_simple_key(item)})
@@ -144,16 +192,19 @@ class AttributeCollectionTest < Test::Unit::TestCase
         setup do
           @container_extra = {:foo => 'foo', :bar => 'bar'}
           @container_added = {:a => 'A', :ab => 'AB'}
+          @value = @container_added.clone
+          @changed_members = SimpleMapper::ChangeHash.new
+          @value.stubs(:simple_mapper_changes).returns(@changed_members)
         end
 
         should 'add keys and values to container' do
-          @instance.expects(:value).with(@object).returns(@container_added.clone)
+          @instance.expects(:value).with(@object).returns(@value)
           result = @instance.to_simple(@object, @container_extra.clone)
           assert_equal @container_extra.merge(@container_added), result
         end
 
         should 'filters keys through :to_simple_key when adding to container' do
-          @instance.expects(:value).with(@object).returns(@container_added.clone)
+          @instance.expects(:value).with(@object).returns(@value)
           expectation = {}
           @container_added.each do |k, v|
             key = k.to_s + ' transformed'
@@ -166,7 +217,7 @@ class AttributeCollectionTest < Test::Unit::TestCase
 
         should 'encode typed values' do
           @instance.type = mock('type')
-          @instance.expects(:value).with(@object).returns(@container_added.clone)
+          @instance.expects(:value).with(@object).returns(@value)
           expectation = {}
           @container_added.each do |k, v|
             expectation[k] = v + ' encoded'
@@ -175,6 +226,57 @@ class AttributeCollectionTest < Test::Unit::TestCase
           result = @instance.to_simple(@object, @container_extra.clone)
           assert_equal @container_extra.merge(expectation), result
         end
+
+        context 'with changes' do
+          setup do
+            @instance.expects(:value).with(@object).returns(@value)
+            @value.instance_eval do
+              def is_member?(key)
+                key? key
+              end
+            end
+          end
+
+          context 'and :changed option' do
+            should 'not include any unchanged members' do
+              result = @instance.to_simple(@object, @container_extra.clone, :changed => true)
+              assert_equal @container_extra, result
+            end
+
+            should 'include members that are changed' do
+              key = @container_added.keys.first
+              @changed_members[key] = true
+              result = @instance.to_simple(@object, @container_extra.clone, :changed => true)
+              assert_equal @container_extra.merge(key => @container_added[key]), result
+            end
+
+            should 'include members that are deleted' do
+              @changed_members[:removed_a] = true
+              @changed_members[:removed_b] = true
+              result = @instance.to_simple(@object, @container_extra.clone, :changed => true)
+              deletes = @changed_members.keys.inject({}) {|m,k| m[k] = nil; m}
+              assert_equal @container_extra.merge(deletes), result
+            end
+          end
+
+          context 'and :all option' do
+            setup do
+              @changed_members[:removed_a] = true
+              @changed_members[:removed_b] = true
+            end
+
+            should 'include all members included deleted ones' do
+              result = @instance.to_simple(@object, @container_extra.clone, :all => true)
+              deletes = @changed_members.keys.inject({}) {|m,k| m[k] = nil; m}
+              assert_equal @container_extra.merge(@container_added).merge(deletes), result
+            end
+
+            should 'not included deleted members if :defined option present' do
+              result = @instance.to_simple(@object, @container_extra.clone, :all => true, :defined => true)
+              assert_equal @container_extra.merge(@container_added), result
+            end
+          end
+        end
       end
 
       context 'with mapped values' do
@@ -182,6 +284,8 @@ class AttributeCollectionTest < Test::Unit::TestCase
           @instance.mapper = stub('mapper', :encode => 'foo')
           @instance.type = @instance.mapper
           @base_value = {}
+          @changed_members = SimpleMapper::ChangeHash.new
+          @base_value.stubs(:simple_mapper_changes).returns(@changed_members)
           @expected_value = {}
           @container = {}
         end
@@ -210,6 +314,31 @@ class AttributeCollectionTest < Test::Unit::TestCase
           @instance.expects(:value).with(@object).returns(@base_value)
           result = @instance.to_simple(@object, @container, :string_keys => true) || {}
           assert_equal @expected_value, result
+        end
+
+        context 'with :changed' do
+          should 'include members marked as changed in the collection and members that identify themselves as changed' do
+            [:collection_changed, :item_changed, :not_changed].each do |sym|
+              val = sym.to_s.upcase
+              expect = val + ' simplified'
+              @expected_value[sym] = {sym => expect}
+              @base_value[sym] = mock(val)
+              @base_value[sym].stubs(:to_simple).with({:changed => true}).returns(@expected_value[sym].clone)
+              @base_value.instance_eval do
+                def is_member?(key)
+                  key? key
+                end
+              end
+            end
+            @base_value[:item_changed].expects(:changed?).with.returns(true)
+            @base_value[:not_changed].expects(:changed?).with.returns(false)
+            @base_value[:collection_changed].expects(:changed?).never
+            @changed_members[:collection_changed] = true
+            @instance.expects(:value).with(@object).returns(@base_value)
+            result = @instance.to_simple(@object, @container, :changed => true)
+            @expected_value.delete(:not_changed)
+            assert_equal @expected_value, result
+          end
         end
       end
     end
