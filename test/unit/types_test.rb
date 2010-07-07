@@ -284,8 +284,16 @@ class AttributesTypesTest < Test::Unit::TestCase
       assert_equal checks, results
     end
 
+    should 'encode nil as nil' do
+      assert_equal true, @type.encode(nil).nil?
+    end
+
+    should 'decode nil as nil' do
+      assert_equal true, @type.decode(nil).nil?
+    end
+
     should 'throw type conversion exceptions if strings do not conform' do
-      ['', nil, 'abc', '7145.abc.234'].each do |string|
+      ['', 'abc', '7145.abc.234'].each do |string|
         assert_raise(SimpleMapper::TypeConversionException) { @type.decode(string) }
       end
     end

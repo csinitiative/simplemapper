@@ -200,12 +200,15 @@ module SimpleMapper::Attributes::Types
     IN_FORMAT  = '%Y-%m-%d %H:%M:%S%z'
 
     def self.encode(value)
+      return nil if value.nil?
       value.strftime(OUT_FORMAT)
     end
 
     def self.decode(value)
       if value.kind_of?(DateTime)
         value
+      elsif value.nil?
+        nil
       else
         if match = PATTERN.match(value.to_s)
           stamp, second_fraction, zone = match.captures
