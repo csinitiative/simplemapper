@@ -1,3 +1,7 @@
+# project artifacts
 .bundle
 tmp
 simple_mapper-*.gem
+
+# editor artifacts
+*.tmproj
